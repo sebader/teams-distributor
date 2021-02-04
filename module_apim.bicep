@@ -17,6 +17,10 @@ resource apim 'Microsoft.ApiManagement/service@2020-06-01-preview' = {
   properties: {
     publisherEmail: publisherEmail
     publisherName: publisherName
+
+    customProperties: {
+      'Microsoft.WindowsAzure.ApiManagement.Gateway.Protocols.Server.Http2': 'true'
+    }
   }
 }
 
@@ -53,20 +57,19 @@ resource operationHealthz 'Microsoft.ApiManagement/service/apis/operations@2020-
 
 resource getbackendPolicy 'Microsoft.ApiManagement/service/apis/operations/policies@2020-06-01-preview' = {
   name: '${operationGetbackend.name}/policy'
-  properties:{
-    format:'xml'
+  properties: {
+    format: 'xml'
     value: '<policies>\r\n  <inbound>\r\n    <base />\r\n    <return-response>\r\n      <set-status code="301" />\r\n      <set-header name="Location" exists-action="override">\r\n        <value>@{\r\n                    var backends = "{{backends}}".Split(\',\');\r\n                    var i = new Random(context.RequestId.GetHashCode()).Next(0, backends.Length);\r\n                    return backends[i];\r\n                }</value>\r\n      </set-header>\r\n    </return-response>\r\n  </inbound>\r\n  <backend>\r\n    <base />\r\n  </backend>\r\n  <outbound>\r\n    <base />\r\n  </outbound>\r\n  <on-error>\r\n    <base />\r\n  </on-error>\r\n</policies>'
   }
 }
 
 resource healthzPolicy 'Microsoft.ApiManagement/service/apis/operations/policies@2020-06-01-preview' = {
   name: '${operationHealthz.name}/policy'
-  properties:{
-    format:'xml'
+  properties: {
+    format: 'xml'
     value: '<policies>\r\n  <inbound>\r\n    <base />\r\n    <return-response>\r\n      <set-status code="200" />\r\n    </return-response>\r\n  </inbound>\r\n  <backend>\r\n    <base />\r\n  </backend>\r\n  <outbound>\r\n    <base />\r\n  </outbound>\r\n  <on-error>\r\n    <base />\r\n  </on-error>\r\n</policies>'
   }
 }
-
 
 // Section: Logging
 
