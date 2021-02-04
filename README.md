@@ -2,7 +2,7 @@
 
 ## How to run
 
-Build bicep
+(optional) Build bicep - if you didn't make any changes, you can also just use the main.json ARM template file from the repo which was already generated
 ```
 bicep build main.bicep
 ```
