@@ -168,6 +168,172 @@
       ]
     },
     {
+      "type": "Microsoft.Portal/dashboards",
+      "apiVersion": "2015-08-01-preview",
+      "name": "[guid(resourceGroup().name, 'dashboard')]",
+      "location": "[parameters('locationPrimary')]",
+      "tags": {
+        "hidden-title": "Teams Distributor Statistics"
+      },
+      "properties": {
+        "lenses": {
+          "0": {
+            "order": 0,
+            "parts": {
+              "0": {
+                "position": {
+                  "colSpan": 10,
+                  "rowSpan": 5,
+                  "x": 0,
+                  "y": 0
+                },
+                "metadata": {
+                  "type": "Extension/Microsoft_OperationsManagementSuite_Workspace/PartType/LogsDashboardPart",
+                  "inputs": [
+                    {
+                      "name": "Scope",
+                      "value": {
+                        "resourceIds": [
+                          "[resourceId('Microsoft.Insights/components', format('{0}appinsights', parameters('prefix')))]"
+                        ]
+                      }
+                    },
+                    {
+                      "name": "Dimensions",
+                      "value": {
+                        "xAxis": {
+                          "name": "timestamp",
+                          "type": "datetime"
+                        },
+                        "yAxis": [
+                          {
+                            "name": "Number of Requests",
+                            "type": "long"
+                          }
+                        ],
+                        "splitBy": [
+                          {
+                            "name": "Backend",
+                            "type": "string"
+                          }
+                        ],
+                        "aggregation": "Sum"
+                      }
+                    },
+                    {
+                      "name": "PartId",
+                      "value": "[guid(resourceGroup().name, 'part0')]"
+                    },
+                    {
+                      "name": "Version",
+                      "value": "2.0"
+                    },
+                    {
+                      "name": "TimeRange",
+                      "value": "PT30M"
+                    },
+                    {
+                      "name": "Query",
+                      "value": "set query_bin_auto_size=5m;\r\nrequests\r\n| extend Backend=tostring(customDimensions['Response-location'])\r\n| where Backend != \"\"\r\n| summarize ['Number of Requests']=count() by Backend, bin_auto(timestamp)\r\n| render areachart"
+                    },
+                    {
+                      "name": "PartTitle",
+                      "value": "Forwarded Requests per Backend"
+                    },
+                    {
+                      "name": "PartSubTitle",
+                      "value": "On 5-Minute aggregation"
+                    },
+                    {
+                      "name": "ControlType",
+                      "value": "FrameControlChart"
+                    },
+                    {
+                      "name": "SpecificChart",
+                      "value": "StackedArea"
+                    }
+                  ]
+                }
+              },
+              "1": {
+                "position": {
+                  "colSpan": 6,
+                  "rowSpan": 5,
+                  "x": 10,
+                  "y": 0
+                },
+                "metadata": {
+                  "type": "Extension/Microsoft_OperationsManagementSuite_Workspace/PartType/LogsDashboardPart",
+                  "inputs": [
+                    {
+                      "name": "Scope",
+                      "value": {
+                        "resourceIds": [
+                          "[resourceId('Microsoft.Insights/components', format('{0}appinsights', parameters('prefix')))]"
+                        ]
+                      }
+                    },
+                    {
+                      "name": "Dimensions",
+                      "value": {
+                        "xAxis": {
+                          "name": "Region",
+                          "type": "string"
+                        },
+                        "yAxis": [
+                          {
+                            "name": "Count",
+                            "type": "long"
+                          }
+                        ],
+                        "splitBy": [],
+                        "aggregation": "Sum"
+                      }
+                    },
+                    {
+                      "name": "PartId",
+                      "value": "[guid(resourceGroup().name, 'part1')]"
+                    },
+                    {
+                      "name": "Version",
+                      "value": "2.0"
+                    },
+                    {
+                      "name": "TimeRange",
+                      "value": "PT30M"
+                    },
+                    {
+                      "name": "Query",
+                      "value": "requests\r\n| summarize Count=count() by Region=tostring(customDimensions.Region)\r\n| render piechart"
+                    },
+                    {
+                      "name": "PartTitle",
+                      "value": "Handled requests per APIM Region"
+                    },
+                    {
+                      "name": "PartSubTitle",
+                      "value": "As load-balanced by Front Door"
+                    },
+                    {
+                      "name": "ControlType",
+                      "value": "FrameControlChart"
+                    },
+                    {
+                      "name": "SpecificChart",
+                      "value": "Pie"
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        }
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.Insights/components', format('{0}appinsights', parameters('prefix')))]"
+      ]
+    },
+    {
       "type": "Microsoft.Resources/deployments",
       "apiVersion": "2019-10-01",
       "name": "[format('apim-{0}-{1}', parameters('locationPrimary'), parameters('deploymentId'))]",
@@ -256,13 +422,30 @@
               ]
             },
             {
+              "type": "Microsoft.ApiManagement/service/apis",
+              "apiVersion": "2020-06-01-preview",
+              "name": "[format('{0}/apimhealthz', format('{0}{1}apim', parameters('prefix'), parameters('location')))]",
+              "properties": {
+                "apiRevision": "1",
+                "displayName": "APIM Healthz",
+                "subscriptionRequired": false,
+                "protocols": [
+                  "https"
+                ],
+                "path": "healthz"
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.ApiManagement/service', format('{0}{1}apim', parameters('prefix'), parameters('location')))]"
+              ]
+            },
+            {
               "type": "Microsoft.ApiManagement/service/apis/operations",
               "apiVersion": "2020-06-01-preview",
               "name": "[format('{0}/getbackend', format('{0}/getbackend', format('{0}{1}apim', parameters('prefix'), parameters('location'))))]",
               "properties": {
                 "displayName": "GetBackend",
                 "method": "GET",
-                "urlTemplate": "/getbackend"
+                "urlTemplate": "/"
               },
               "dependsOn": [
                 "[resourceId('Microsoft.ApiManagement/service/apis', split(format('{0}/getbackend', format('{0}{1}apim', parameters('prefix'), parameters('location'))), '/')[0], split(format('{0}/getbackend', format('{0}{1}apim', parameters('prefix'), parameters('location'))), '/')[1])]"
@@ -271,14 +454,14 @@
             {
               "type": "Microsoft.ApiManagement/service/apis/operations",
               "apiVersion": "2020-06-01-preview",
-              "name": "[format('{0}/healthz', format('{0}/getbackend', format('{0}{1}apim', parameters('prefix'), parameters('location'))))]",
+              "name": "[format('{0}/apimhealth', format('{0}/apimhealthz', format('{0}{1}apim', parameters('prefix'), parameters('location'))))]",
               "properties": {
-                "displayName": "Healthz",
+                "displayName": "ApimHealth",
                 "method": "HEAD",
-                "urlTemplate": "/healthz"
+                "urlTemplate": "/"
               },
               "dependsOn": [
-                "[resourceId('Microsoft.ApiManagement/service/apis', split(format('{0}/getbackend', format('{0}{1}apim', parameters('prefix'), parameters('location'))), '/')[0], split(format('{0}/getbackend', format('{0}{1}apim', parameters('prefix'), parameters('location'))), '/')[1])]"
+                "[resourceId('Microsoft.ApiManagement/service/apis', split(format('{0}/apimhealthz', format('{0}{1}apim', parameters('prefix'), parameters('location'))), '/')[0], split(format('{0}/apimhealthz', format('{0}{1}apim', parameters('prefix'), parameters('location'))), '/')[1])]"
               ]
             },
             {
@@ -287,7 +470,7 @@
               "name": "[format('{0}/policy', format('{0}/getbackend', format('{0}/getbackend', format('{0}{1}apim', parameters('prefix'), parameters('location')))))]",
               "properties": {
                 "format": "xml",
-                "value": "<policies>\r\n  <inbound>\r\n    <base />\r\n    <return-response>\r\n      <set-status code=\"301\" />\r\n      <set-header name=\"Location\" exists-action=\"override\">\r\n        <value>@{\r\n                    var backends = \"{{backends}}\".Split(',');\r\n                    var i = new Random(context.RequestId.GetHashCode()).Next(0, backends.Length);\r\n                    return backends[i];\r\n                }</value>\r\n      </set-header>\r\n    </return-response>\r\n  </inbound>\r\n  <backend>\r\n    <base />\r\n  </backend>\r\n  <outbound>\r\n    <base />\r\n  </outbound>\r\n  <on-error>\r\n    <base />\r\n  </on-error>\r\n</policies>"
+                "value": "<policies>\r\n  <inbound>\r\n    <base />\r\n    <return-response>\r\n      <set-status code=\"302\" />\r\n      <set-header name=\"Location\" exists-action=\"override\">\r\n        <value>@{\r\n                    var backends = \"{{backends}}\".Split(',');\r\n                    var i = new Random(context.RequestId.GetHashCode()).Next(0, backends.Length);\r\n                    return backends[i];\r\n                }</value>\r\n      </set-header>\r\n    </return-response>\r\n  </inbound>\r\n  <backend>\r\n    <base />\r\n  </backend>\r\n  <outbound>\r\n    <base />\r\n  </outbound>\r\n  <on-error>\r\n    <base />\r\n  </on-error>\r\n</policies>"
               },
               "dependsOn": [
                 "[resourceId('Microsoft.ApiManagement/service/apis/operations', split(format('{0}/getbackend', format('{0}/getbackend', format('{0}{1}apim', parameters('prefix'), parameters('location')))), '/')[0], split(format('{0}/getbackend', format('{0}/getbackend', format('{0}{1}apim', parameters('prefix'), parameters('location')))), '/')[1], split(format('{0}/getbackend', format('{0}/getbackend', format('{0}{1}apim', parameters('prefix'), parameters('location')))), '/')[2])]"
@@ -296,13 +479,13 @@
             {
               "type": "Microsoft.ApiManagement/service/apis/operations/policies",
               "apiVersion": "2020-06-01-preview",
-              "name": "[format('{0}/policy', format('{0}/healthz', format('{0}/getbackend', format('{0}{1}apim', parameters('prefix'), parameters('location')))))]",
+              "name": "[format('{0}/policy', format('{0}/apimhealth', format('{0}/apimhealthz', format('{0}{1}apim', parameters('prefix'), parameters('location')))))]",
               "properties": {
                 "format": "xml",
                 "value": "<policies>\r\n  <inbound>\r\n    <base />\r\n    <return-response>\r\n      <set-status code=\"200\" />\r\n    </return-response>\r\n  </inbound>\r\n  <backend>\r\n    <base />\r\n  </backend>\r\n  <outbound>\r\n    <base />\r\n  </outbound>\r\n  <on-error>\r\n    <base />\r\n  </on-error>\r\n</policies>"
               },
               "dependsOn": [
-                "[resourceId('Microsoft.ApiManagement/service/apis/operations', split(format('{0}/healthz', format('{0}/getbackend', format('{0}{1}apim', parameters('prefix'), parameters('location')))), '/')[0], split(format('{0}/healthz', format('{0}/getbackend', format('{0}{1}apim', parameters('prefix'), parameters('location')))), '/')[1], split(format('{0}/healthz', format('{0}/getbackend', format('{0}{1}apim', parameters('prefix'), parameters('location')))), '/')[2])]"
+                "[resourceId('Microsoft.ApiManagement/service/apis/operations', split(format('{0}/apimhealth', format('{0}/apimhealthz', format('{0}{1}apim', parameters('prefix'), parameters('location')))), '/')[0], split(format('{0}/apimhealth', format('{0}/apimhealthz', format('{0}{1}apim', parameters('prefix'), parameters('location')))), '/')[1], split(format('{0}/apimhealth', format('{0}/apimhealthz', format('{0}{1}apim', parameters('prefix'), parameters('location')))), '/')[2])]"
               ]
             },
             {
@@ -322,11 +505,12 @@
               ]
             },
             {
-              "type": "Microsoft.ApiManagement/service/diagnostics",
+              "type": "Microsoft.ApiManagement/service/apis/diagnostics",
               "apiVersion": "2020-06-01-preview",
-              "name": "[format('{0}/applicationinsights', format('{0}{1}apim', parameters('prefix'), parameters('location')))]",
+              "name": "[format('{0}/applicationinsights', format('{0}/getbackend', format('{0}{1}apim', parameters('prefix'), parameters('location'))))]",
               "properties": {
                 "alwaysLog": "allErrors",
+                "httpCorrelationProtocol": "W3C",
                 "verbosity": "information",
                 "loggerId": "[resourceId('Microsoft.ApiManagement/service/loggers', split(format('{0}/{1}', format('{0}{1}apim', parameters('prefix'), parameters('location')), parameters('applicationInsightsName')), '/')[0], split(format('{0}/{1}', format('{0}{1}apim', parameters('prefix'), parameters('location')), parameters('applicationInsightsName')), '/')[1])]",
                 "frontend": {
@@ -338,7 +522,7 @@
                 }
               },
               "dependsOn": [
-                "[resourceId('Microsoft.ApiManagement/service', format('{0}{1}apim', parameters('prefix'), parameters('location')))]",
+                "[resourceId('Microsoft.ApiManagement/service/apis', split(format('{0}/getbackend', format('{0}{1}apim', parameters('prefix'), parameters('location'))), '/')[0], split(format('{0}/getbackend', format('{0}{1}apim', parameters('prefix'), parameters('location'))), '/')[1])]",
                 "[resourceId('Microsoft.ApiManagement/service/loggers', split(format('{0}/{1}', format('{0}{1}apim', parameters('prefix'), parameters('location')), parameters('applicationInsightsName')), '/')[0], split(format('{0}/{1}', format('{0}{1}apim', parameters('prefix'), parameters('location')), parameters('applicationInsightsName')), '/')[1])]"
               ]
             },
@@ -456,13 +640,30 @@
               ]
             },
             {
+              "type": "Microsoft.ApiManagement/service/apis",
+              "apiVersion": "2020-06-01-preview",
+              "name": "[format('{0}/apimhealthz', format('{0}{1}apim', parameters('prefix'), parameters('location')))]",
+              "properties": {
+                "apiRevision": "1",
+                "displayName": "APIM Healthz",
+                "subscriptionRequired": false,
+                "protocols": [
+                  "https"
+                ],
+                "path": "healthz"
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.ApiManagement/service', format('{0}{1}apim', parameters('prefix'), parameters('location')))]"
+              ]
+            },
+            {
               "type": "Microsoft.ApiManagement/service/apis/operations",
               "apiVersion": "2020-06-01-preview",
               "name": "[format('{0}/getbackend', format('{0}/getbackend', format('{0}{1}apim', parameters('prefix'), parameters('location'))))]",
               "properties": {
                 "displayName": "GetBackend",
                 "method": "GET",
-                "urlTemplate": "/getbackend"
+                "urlTemplate": "/"
               },
               "dependsOn": [
                 "[resourceId('Microsoft.ApiManagement/service/apis', split(format('{0}/getbackend', format('{0}{1}apim', parameters('prefix'), parameters('location'))), '/')[0], split(format('{0}/getbackend', format('{0}{1}apim', parameters('prefix'), parameters('location'))), '/')[1])]"
@@ -471,14 +672,14 @@
             {
               "type": "Microsoft.ApiManagement/service/apis/operations",
               "apiVersion": "2020-06-01-preview",
-              "name": "[format('{0}/healthz', format('{0}/getbackend', format('{0}{1}apim', parameters('prefix'), parameters('location'))))]",
+              "name": "[format('{0}/apimhealth', format('{0}/apimhealthz', format('{0}{1}apim', parameters('prefix'), parameters('location'))))]",
               "properties": {
-                "displayName": "Healthz",
+                "displayName": "ApimHealth",
                 "method": "HEAD",
-                "urlTemplate": "/healthz"
+                "urlTemplate": "/"
               },
               "dependsOn": [
-                "[resourceId('Microsoft.ApiManagement/service/apis', split(format('{0}/getbackend', format('{0}{1}apim', parameters('prefix'), parameters('location'))), '/')[0], split(format('{0}/getbackend', format('{0}{1}apim', parameters('prefix'), parameters('location'))), '/')[1])]"
+                "[resourceId('Microsoft.ApiManagement/service/apis', split(format('{0}/apimhealthz', format('{0}{1}apim', parameters('prefix'), parameters('location'))), '/')[0], split(format('{0}/apimhealthz', format('{0}{1}apim', parameters('prefix'), parameters('location'))), '/')[1])]"
               ]
             },
             {
@@ -487,7 +688,7 @@
               "name": "[format('{0}/policy', format('{0}/getbackend', format('{0}/getbackend', format('{0}{1}apim', parameters('prefix'), parameters('location')))))]",
               "properties": {
                 "format": "xml",
-                "value": "<policies>\r\n  <inbound>\r\n    <base />\r\n    <return-response>\r\n      <set-status code=\"301\" />\r\n      <set-header name=\"Location\" exists-action=\"override\">\r\n        <value>@{\r\n                    var backends = \"{{backends}}\".Split(',');\r\n                    var i = new Random(context.RequestId.GetHashCode()).Next(0, backends.Length);\r\n                    return backends[i];\r\n                }</value>\r\n      </set-header>\r\n    </return-response>\r\n  </inbound>\r\n  <backend>\r\n    <base />\r\n  </backend>\r\n  <outbound>\r\n    <base />\r\n  </outbound>\r\n  <on-error>\r\n    <base />\r\n  </on-error>\r\n</policies>"
+                "value": "<policies>\r\n  <inbound>\r\n    <base />\r\n    <return-response>\r\n      <set-status code=\"302\" />\r\n      <set-header name=\"Location\" exists-action=\"override\">\r\n        <value>@{\r\n                    var backends = \"{{backends}}\".Split(',');\r\n                    var i = new Random(context.RequestId.GetHashCode()).Next(0, backends.Length);\r\n                    return backends[i];\r\n                }</value>\r\n      </set-header>\r\n    </return-response>\r\n  </inbound>\r\n  <backend>\r\n    <base />\r\n  </backend>\r\n  <outbound>\r\n    <base />\r\n  </outbound>\r\n  <on-error>\r\n    <base />\r\n  </on-error>\r\n</policies>"
               },
               "dependsOn": [
                 "[resourceId('Microsoft.ApiManagement/service/apis/operations', split(format('{0}/getbackend', format('{0}/getbackend', format('{0}{1}apim', parameters('prefix'), parameters('location')))), '/')[0], split(format('{0}/getbackend', format('{0}/getbackend', format('{0}{1}apim', parameters('prefix'), parameters('location')))), '/')[1], split(format('{0}/getbackend', format('{0}/getbackend', format('{0}{1}apim', parameters('prefix'), parameters('location')))), '/')[2])]"
@@ -496,13 +697,13 @@
             {
               "type": "Microsoft.ApiManagement/service/apis/operations/policies",
               "apiVersion": "2020-06-01-preview",
-              "name": "[format('{0}/policy', format('{0}/healthz', format('{0}/getbackend', format('{0}{1}apim', parameters('prefix'), parameters('location')))))]",
+              "name": "[format('{0}/policy', format('{0}/apimhealth', format('{0}/apimhealthz', format('{0}{1}apim', parameters('prefix'), parameters('location')))))]",
               "properties": {
                 "format": "xml",
                 "value": "<policies>\r\n  <inbound>\r\n    <base />\r\n    <return-response>\r\n      <set-status code=\"200\" />\r\n    </return-response>\r\n  </inbound>\r\n  <backend>\r\n    <base />\r\n  </backend>\r\n  <outbound>\r\n    <base />\r\n  </outbound>\r\n  <on-error>\r\n    <base />\r\n  </on-error>\r\n</policies>"
               },
               "dependsOn": [
-                "[resourceId('Microsoft.ApiManagement/service/apis/operations', split(format('{0}/healthz', format('{0}/getbackend', format('{0}{1}apim', parameters('prefix'), parameters('location')))), '/')[0], split(format('{0}/healthz', format('{0}/getbackend', format('{0}{1}apim', parameters('prefix'), parameters('location')))), '/')[1], split(format('{0}/healthz', format('{0}/getbackend', format('{0}{1}apim', parameters('prefix'), parameters('location')))), '/')[2])]"
+                "[resourceId('Microsoft.ApiManagement/service/apis/operations', split(format('{0}/apimhealth', format('{0}/apimhealthz', format('{0}{1}apim', parameters('prefix'), parameters('location')))), '/')[0], split(format('{0}/apimhealth', format('{0}/apimhealthz', format('{0}{1}apim', parameters('prefix'), parameters('location')))), '/')[1], split(format('{0}/apimhealth', format('{0}/apimhealthz', format('{0}{1}apim', parameters('prefix'), parameters('location')))), '/')[2])]"
               ]
             },
             {
@@ -522,11 +723,12 @@
               ]
             },
             {
-              "type": "Microsoft.ApiManagement/service/diagnostics",
+              "type": "Microsoft.ApiManagement/service/apis/diagnostics",
               "apiVersion": "2020-06-01-preview",
-              "name": "[format('{0}/applicationinsights', format('{0}{1}apim', parameters('prefix'), parameters('location')))]",
+              "name": "[format('{0}/applicationinsights', format('{0}/getbackend', format('{0}{1}apim', parameters('prefix'), parameters('location'))))]",
               "properties": {
                 "alwaysLog": "allErrors",
+                "httpCorrelationProtocol": "W3C",
                 "verbosity": "information",
                 "loggerId": "[resourceId('Microsoft.ApiManagement/service/loggers', split(format('{0}/{1}', format('{0}{1}apim', parameters('prefix'), parameters('location')), parameters('applicationInsightsName')), '/')[0], split(format('{0}/{1}', format('{0}{1}apim', parameters('prefix'), parameters('location')), parameters('applicationInsightsName')), '/')[1])]",
                 "frontend": {
@@ -538,7 +740,7 @@
                 }
               },
               "dependsOn": [
-                "[resourceId('Microsoft.ApiManagement/service', format('{0}{1}apim', parameters('prefix'), parameters('location')))]",
+                "[resourceId('Microsoft.ApiManagement/service/apis', split(format('{0}/getbackend', format('{0}{1}apim', parameters('prefix'), parameters('location'))), '/')[0], split(format('{0}/getbackend', format('{0}{1}apim', parameters('prefix'), parameters('location'))), '/')[1])]",
                 "[resourceId('Microsoft.ApiManagement/service/loggers', split(format('{0}/{1}', format('{0}{1}apim', parameters('prefix'), parameters('location')), parameters('applicationInsightsName')), '/')[0], split(format('{0}/{1}', format('{0}{1}apim', parameters('prefix'), parameters('location')), parameters('applicationInsightsName')), '/')[1])]"
               ]
             },
