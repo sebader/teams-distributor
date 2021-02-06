@@ -24,7 +24,7 @@ resource apim 'Microsoft.ApiManagement/service@2020-06-01-preview' = {
   }
 }
 
-resource api 'Microsoft.ApiManagement/service/apis@2020-06-01-preview' = {
+resource apiGetbackend 'Microsoft.ApiManagement/service/apis@2020-06-01-preview' = {
   name: '${apim.name}/getbackend'
   properties: {
     apiRevision: '1'
@@ -37,21 +37,34 @@ resource api 'Microsoft.ApiManagement/service/apis@2020-06-01-preview' = {
   }
 }
 
+resource apiHealthz 'Microsoft.ApiManagement/service/apis@2020-06-01-preview' = {
+  name: '${apim.name}/apimhealthz'
+  properties: {
+    apiRevision: '1'
+    displayName: 'APIM Healthz'
+    subscriptionRequired: false
+    protocols: [
+      'https'
+    ]
+    path: 'healthz'
+  }
+}
+
 resource operationGetbackend 'Microsoft.ApiManagement/service/apis/operations@2020-06-01-preview' = {
-  name: '${api.name}/getbackend'
+  name: '${apiGetbackend.name}/getbackend'
   properties: {
     displayName: 'GetBackend'
     method: 'GET'
-    urlTemplate: '/getbackend'
+    urlTemplate: '/'
   }
 }
 
 resource operationHealthz 'Microsoft.ApiManagement/service/apis/operations@2020-06-01-preview' = {
-  name: '${api.name}/healthz'
+  name: '${apiHealthz.name}/apimhealth'
   properties: {
-    displayName: 'Healthz'
+    displayName: 'ApimHealth'
     method: 'HEAD'
-    urlTemplate: '/healthz'
+    urlTemplate: '/'
   }
 }
 
@@ -59,7 +72,7 @@ resource getbackendPolicy 'Microsoft.ApiManagement/service/apis/operations/polic
   name: '${operationGetbackend.name}/policy'
   properties: {
     format: 'xml'
-    value: '<policies>\r\n  <inbound>\r\n    <base />\r\n    <return-response>\r\n      <set-status code="301" />\r\n      <set-header name="Location" exists-action="override">\r\n        <value>@{\r\n                    var backends = "{{backends}}".Split(\',\');\r\n                    var i = new Random(context.RequestId.GetHashCode()).Next(0, backends.Length);\r\n                    return backends[i];\r\n                }</value>\r\n      </set-header>\r\n    </return-response>\r\n  </inbound>\r\n  <backend>\r\n    <base />\r\n  </backend>\r\n  <outbound>\r\n    <base />\r\n  </outbound>\r\n  <on-error>\r\n    <base />\r\n  </on-error>\r\n</policies>'
+    value: '<policies>\r\n  <inbound>\r\n    <base />\r\n    <return-response>\r\n      <set-status code="302" />\r\n      <set-header name="Location" exists-action="override">\r\n        <value>@{\r\n                    var backends = "{{backends}}".Split(\',\');\r\n                    var i = new Random(context.RequestId.GetHashCode()).Next(0, backends.Length);\r\n                    return backends[i];\r\n                }</value>\r\n      </set-header>\r\n    </return-response>\r\n  </inbound>\r\n  <backend>\r\n    <base />\r\n  </backend>\r\n  <outbound>\r\n    <base />\r\n  </outbound>\r\n  <on-error>\r\n    <base />\r\n  </on-error>\r\n</policies>'
   }
 }
 
@@ -85,10 +98,11 @@ resource apimLogger 'Microsoft.ApiManagement/service/loggers@2020-06-01-preview'
   }
 }
 
-resource apiDiagnostics 'Microsoft.ApiManagement/service/diagnostics@2020-06-01-preview' = {
-  name: '${apim.name}/applicationinsights'
+resource apiGetbackendDiagnostics 'Microsoft.ApiManagement/service/apis/diagnostics@2020-06-01-preview' = {
+  name: '${apiGetbackend.name}/applicationinsights'
   properties: {
     alwaysLog: 'allErrors'
+    httpCorrelationProtocol: 'W3C'
     verbosity: 'information'
     loggerId: apimLogger.id
     frontend: {
