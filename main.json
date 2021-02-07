@@ -2,16 +2,24 @@
   "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
   "contentVersion": "1.0.0.0",
   "parameters": {
-    "locationPrimary": {
+    "prefix": {
       "type": "string",
-      "defaultValue": "northeurope"
+      "metadata": {
+        "description": "Prefix for all resources to create uniqueness"
+      }
     },
     "locationSecondary": {
       "type": "string",
+      "metadata": {
+        "description": "Location of the second API Management instance. Should be different than the location of the resource group. Must support APIM Consumption tier."
+      },
       "defaultValue": "westeurope"
     },
-    "prefix": {
-      "type": "string"
+    "backends": {
+      "type": "string",
+      "metadata": {
+        "description": "Comma-separated list of backend URLs to which incoming requests will be forwarded to in a random fashion."
+      }
     },
     "apimPublisherEmail": {
       "type": "string",
@@ -20,9 +28,6 @@
     "apimPublisherName": {
       "type": "string",
       "defaultValue": "Contoso Admin"
-    },
-    "backends": {
-      "type": "string"
     },
     "deploymentId": {
       "type": "string",
@@ -34,6 +39,7 @@
   },
   "functions": [],
   "variables": {
+    "location": "[resourceGroup().location]",
     "frontDoorName": "[format('{0}globalfrontdoor', parameters('prefix'))]",
     "frontdoor_default_dns_name": "[format('{0}.azurefd.net', variables('frontDoorName'))]"
   },
@@ -42,7 +48,7 @@
       "type": "Microsoft.Insights/components",
       "apiVersion": "2018-05-01-preview",
       "name": "[format('{0}appinsights', parameters('prefix'))]",
-      "location": "[parameters('locationPrimary')]",
+      "location": "[variables('location')]",
       "kind": "web",
       "properties": {
         "Application_Type": "web"
@@ -60,8 +66,8 @@
             "properties": {
               "backends": [
                 {
-                  "address": "[reference(extensionResourceId(resourceGroup().id, 'Microsoft.Resources/deployments', format('apim-{0}-{1}', parameters('locationPrimary'), parameters('deploymentId'))), '2019-10-01').outputs.apimHostname.value]",
-                  "backendHostHeader": "[reference(extensionResourceId(resourceGroup().id, 'Microsoft.Resources/deployments', format('apim-{0}-{1}', parameters('locationPrimary'), parameters('deploymentId'))), '2019-10-01').outputs.apimHostname.value]",
+                  "address": "[reference(extensionResourceId(resourceGroup().id, 'Microsoft.Resources/deployments', format('apim-{0}-{1}', variables('location'), parameters('deploymentId'))), '2019-10-01').outputs.apimHostname.value]",
+                  "backendHostHeader": "[reference(extensionResourceId(resourceGroup().id, 'Microsoft.Resources/deployments', format('apim-{0}-{1}', variables('location'), parameters('deploymentId'))), '2019-10-01').outputs.apimHostname.value]",
                   "httpPort": 80,
                   "httpsPort": 443,
                   "priority": 1,
@@ -163,7 +169,7 @@
         ]
       },
       "dependsOn": [
-        "[extensionResourceId(resourceGroup().id, 'Microsoft.Resources/deployments', format('apim-{0}-{1}', parameters('locationPrimary'), parameters('deploymentId')))]",
+        "[extensionResourceId(resourceGroup().id, 'Microsoft.Resources/deployments', format('apim-{0}-{1}', variables('location'), parameters('deploymentId')))]",
         "[extensionResourceId(resourceGroup().id, 'Microsoft.Resources/deployments', format('apim-{0}-{1}', parameters('locationSecondary'), parameters('deploymentId')))]"
       ]
     },
@@ -171,7 +177,7 @@
       "type": "Microsoft.Portal/dashboards",
       "apiVersion": "2015-08-01-preview",
       "name": "[guid(resourceGroup().name, 'dashboard')]",
-      "location": "[parameters('locationPrimary')]",
+      "location": "[variables('location')]",
       "tags": {
         "hidden-title": "Teams Distributor Statistics"
       },
@@ -336,7 +342,7 @@
     {
       "type": "Microsoft.Resources/deployments",
       "apiVersion": "2019-10-01",
-      "name": "[format('apim-{0}-{1}', parameters('locationPrimary'), parameters('deploymentId'))]",
+      "name": "[format('apim-{0}-{1}', variables('location'), parameters('deploymentId'))]",
       "properties": {
         "expressionEvaluationOptions": {
           "scope": "inner"
@@ -347,7 +353,7 @@
             "value": "[format('{0}appinsights', parameters('prefix'))]"
           },
           "location": {
-            "value": "[parameters('locationPrimary')]"
+            "value": "[variables('location')]"
           },
           "backends": {
             "value": "[parameters('backends')]"
@@ -769,5 +775,11 @@
         "[resourceId('Microsoft.Insights/components', format('{0}appinsights', parameters('prefix')))]"
       ]
     }
-  ]
+  ],
+  "outputs": {
+    "frontDoorUrl": {
+      "type": "string",
+      "value": "[variables('frontdoor_default_dns_name')]"
+    }
+  }
 }

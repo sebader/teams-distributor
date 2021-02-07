@@ -1,10 +1,23 @@
-param locationPrimary string = 'northeurope'
-param locationSecondary string = 'westeurope'
-param prefix string
+param prefix string {
+  metadata: {
+    description: 'Prefix for all resources to create uniqueness'
+  }
+}
+param locationSecondary string {
+  default: 'westeurope'
+  metadata: {
+    description: 'Location of the second API Management instance. Should be different than the location of the resource group. Must support APIM Consumption tier.'
+  }
+}
+
+param backends string {
+  metadata: {
+    description: 'Comma-separated list of backend URLs to which incoming requests will be forwarded to in a random fashion.'
+  }
+}
+
 param apimPublisherEmail string = 'noreply@contoso.com'
 param apimPublisherName string = 'Contoso Admin'
-
-param backends string
 
 param deploymentId string {
   default: utcNow()
@@ -13,12 +26,14 @@ param deploymentId string {
   }
 }
 
+var location = resourceGroup().location
+
 var frontDoorName = '${prefix}globalfrontdoor'
 var frontdoor_default_dns_name = '${frontDoorName}.azurefd.net'
 
 resource appinsights 'Microsoft.Insights/components@2018-05-01-preview' = {
   name: '${prefix}appinsights'
-  location: locationPrimary
+  location: location
   kind: 'web'
   properties: {
     Application_Type: 'web'
@@ -26,10 +41,10 @@ resource appinsights 'Microsoft.Insights/components@2018-05-01-preview' = {
 }
 
 module apimPrimaryRegion 'module_apim.bicep' = {
-  name: 'apim-${locationPrimary}-${deploymentId}'
+  name: 'apim-${location}-${deploymentId}'
   params: {
     applicationInsightsName: appinsights.name
-    location: locationPrimary
+    location: location
     backends: backends
     prefix: prefix
     publisherEmail: apimPublisherEmail
@@ -175,7 +190,7 @@ resource frontdoor 'Microsoft.Network/frontDoors@2020-05-01' = {
 
 resource dashboard 'Microsoft.Portal/dashboards@2015-08-01-preview' = {
   name: guid(resourceGroup().name, 'dashboard')
-  location: locationPrimary
+  location: location
   tags: {
     'hidden-title': 'Teams Distributor Statistics'
   }
@@ -334,3 +349,5 @@ resource dashboard 'Microsoft.Portal/dashboards@2015-08-01-preview' = {
     }
   }
 }
+
+output frontDoorUrl string = frontdoor_default_dns_name
