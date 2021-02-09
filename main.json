@@ -161,7 +161,7 @@
           {
             "name": "LoadBalancingSettings",
             "properties": {
-              "additionalLatencyMilliseconds": 200,
+              "additionalLatencyMilliseconds": 500,
               "sampleSize": 4,
               "successfulSamplesRequired": 2
             }

@@ -179,7 +179,7 @@ resource frontdoor 'Microsoft.Network/frontDoors@2020-05-01' = {
       {
         name: 'LoadBalancingSettings'
         properties: {
-          additionalLatencyMilliseconds: 200
+          additionalLatencyMilliseconds: 500
           sampleSize: 4
           successfulSamplesRequired: 2
         }
