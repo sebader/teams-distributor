@@ -13,11 +13,16 @@ function Get-UrlStatusCode([string] $Url)
 {
     try
     {
-        (Invoke-WebRequest -Uri $Url -UseBasicParsing -DisableKeepAlive).StatusCode
+        $response = Invoke-WebRequest -Uri $Url -UseBasicParsing -DisableKeepAlive -MaximumRedirection 0 -SkipHttpErrorCheck -ErrorAction Ignore
+        if($response.StatusCode -ne 302)
+        {
+            Write-Error -Message "Unexpected status code ($($response.StatusCode))" -ErrorAction Stop
+        }
+        Write-Host "Success! Status code: $($response.StatusCode) -- Backend: $($response.Headers['Location'])"
     }
-    catch [Net.WebException]
+    catch [Exception]
     {
-        [int]$_.Exception.Response.StatusCode
+        $_.Exception.Message
     }
 }
 
