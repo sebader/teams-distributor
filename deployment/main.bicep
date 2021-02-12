@@ -4,7 +4,7 @@ param prefix string {
   }
 }
 param locationSecondary string {
-  default: 'westeurope'
+  default: 'northeurope'
   metadata: {
     description: 'Region of the second API Management instance. Needs to be different than the location of the resource group which is being used as the primary location. Must support APIM Consumption tier.'
   }
@@ -15,14 +15,24 @@ param backends string {
     description: 'Comma-separated list of backend URLs to which incoming requests will be forwarded to in a random fashion. For example like: https://teams.microsoft.com/l/meetup-join/1,https://teams.microsoft.com/l/meetup-join/2'
   }
 }
+param apimPublisherName string {
+  default: 'Contoso Admin'
+  metadata:{
+    description: 'API Management Publisher Name'
+  }
+}
 
-param apimPublisherEmail string = 'noreply@contoso.com'
-param apimPublisherName string = 'Contoso Admin'
+param apimPublisherEmail string {
+  default: 'noreply@contoso.com'
+  metadata:{
+    description: 'API Management Publisher Email Address'
+  }
+}
 
 param deploymentId string {
   default: utcNow()
   metadata: {
-    description: 'ID to be added to the deployment names, such as the run ID of a pipeline. Default to UTC-now timestamp'
+    description: 'No need to change. ID to be added to the deployment names, such as the run ID of a pipeline. Default to UTC-now timestamp'
   }
 }
 
