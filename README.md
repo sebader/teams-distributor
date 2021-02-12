@@ -54,6 +54,10 @@ Alternatively you can deploy through the Azure Portal directly:
 
 [![Deploy to Azure](https://aka.ms/deploytoazurebutton)](https://portal.azure.com/#create/Microsoft.Template/uri/https%3A%2F%2Fraw.githubusercontent.com%2Fsebader%2Fteams-distributor%2Fmain%2Fdeployment%2Fmain.json)
 
+Your initial URL - if you did not use a custom domain - will be like [https://{MYPREFIX}globalfrontdoor.azurefd.net]()
+
+_Note: After the first deployment it can take a couple of minutes until the Front Door URL goes lives and starts to your traffic_
+
 ## Costs 
 (only provided as an example, as of Feb-2021)
 
