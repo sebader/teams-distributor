@@ -6,13 +6,13 @@ param prefix string {
 param locationSecondary string {
   default: 'westeurope'
   metadata: {
-    description: 'Region of the second API Management instance. Should be different than the location of the resource group. Must support APIM Consumption tier.'
+    description: 'Region of the second API Management instance. Needs to be different than the location of the resource group which is being used as the primary location. Must support APIM Consumption tier.'
   }
 }
 
 param backends string {
   metadata: {
-    description: 'Comma-separated list of backend URLs to which incoming requests will be forwarded to in a random fashion.'
+    description: 'Comma-separated list of backend URLs to which incoming requests will be forwarded to in a random fashion. For example like: https://teams.microsoft.com/l/meetup-join/1,https://teams.microsoft.com/l/meetup-join/2'
   }
 }
 
