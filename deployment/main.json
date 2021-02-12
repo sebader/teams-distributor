@@ -495,13 +495,26 @@
               ]
             },
             {
+              "type": "Microsoft.ApiManagement/service/namedValues",
+              "apiVersion": "2020-06-01-preview",
+              "name": "[format('{0}/logger-credentials', format('{0}{1}apim', parameters('prefix'), parameters('location')))]",
+              "properties": {
+                "displayName": "logger-credentials",
+                "value": "[reference(resourceId('Microsoft.Insights/components', parameters('applicationInsightsName')), '2018-05-01-preview').InstrumentationKey]",
+                "secret": true
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.ApiManagement/service', format('{0}{1}apim', parameters('prefix'), parameters('location')))]"
+              ]
+            },
+            {
               "type": "Microsoft.ApiManagement/service/loggers",
               "apiVersion": "2020-06-01-preview",
               "name": "[format('{0}/{1}', format('{0}{1}apim', parameters('prefix'), parameters('location')), parameters('applicationInsightsName'))]",
               "properties": {
                 "loggerType": "applicationInsights",
                 "credentials": {
-                  "instrumentationKey": "[reference(resourceId('Microsoft.Insights/components', parameters('applicationInsightsName')), '2018-05-01-preview').InstrumentationKey]"
+                  "instrumentationKey": "{{logger-credentials}}"
                 },
                 "isBuffered": true,
                 "resourceId": "[resourceId('Microsoft.Insights/components', parameters('applicationInsightsName'))]"
@@ -713,13 +726,26 @@
               ]
             },
             {
+              "type": "Microsoft.ApiManagement/service/namedValues",
+              "apiVersion": "2020-06-01-preview",
+              "name": "[format('{0}/logger-credentials', format('{0}{1}apim', parameters('prefix'), parameters('location')))]",
+              "properties": {
+                "displayName": "logger-credentials",
+                "value": "[reference(resourceId('Microsoft.Insights/components', parameters('applicationInsightsName')), '2018-05-01-preview').InstrumentationKey]",
+                "secret": true
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.ApiManagement/service', format('{0}{1}apim', parameters('prefix'), parameters('location')))]"
+              ]
+            },
+            {
               "type": "Microsoft.ApiManagement/service/loggers",
               "apiVersion": "2020-06-01-preview",
               "name": "[format('{0}/{1}', format('{0}{1}apim', parameters('prefix'), parameters('location')), parameters('applicationInsightsName'))]",
               "properties": {
                 "loggerType": "applicationInsights",
                 "credentials": {
-                  "instrumentationKey": "[reference(resourceId('Microsoft.Insights/components', parameters('applicationInsightsName')), '2018-05-01-preview').InstrumentationKey]"
+                  "instrumentationKey": "{{logger-credentials}}"
                 },
                 "isBuffered": true,
                 "resourceId": "[resourceId('Microsoft.Insights/components', parameters('applicationInsightsName'))]"

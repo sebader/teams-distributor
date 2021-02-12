@@ -86,12 +86,21 @@ resource healthzPolicy 'Microsoft.ApiManagement/service/apis/operations/policies
 
 // Section: Logging
 
+resource namedValueAppInsightsKey 'Microsoft.ApiManagement/service/namedValues@2020-06-01-preview' = {
+  name: '${apim.name}/logger-credentials'
+  properties: {
+    displayName: 'logger-credentials'
+    value: appInsights.properties.InstrumentationKey
+    secret: true
+  }
+}
+
 resource apimLogger 'Microsoft.ApiManagement/service/loggers@2020-06-01-preview' = {
   name: '${apim.name}/${appInsights.name}'
   properties: {
     loggerType: 'applicationInsights'
     credentials: {
-      instrumentationKey: appInsights.properties.InstrumentationKey
+      instrumentationKey: '{{logger-credentials}}'
     }
     isBuffered: true
     resourceId: appInsights.id
