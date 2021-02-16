@@ -18,6 +18,11 @@ foreach ($storageAccount in $storageAccounts) {
 
     $cloudTable = (Get-AzStorageTable –Name $tableName –Context $ctx).CloudTable
 
+    # First, delete all current entries in the table
+    $currentRows = Get-AzTableRow -Table $cloudTable 
+    Write-Host "Deleting $($currentRows.Count) old rows from the table"
+    $currentRows | Remove-AzTableRow -Table $cloudTable 
+
     $i = 0
     foreach ($url in $urls) {
         Add-AzTableRow `
