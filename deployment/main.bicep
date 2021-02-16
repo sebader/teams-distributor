@@ -15,16 +15,24 @@ param backends string {
     description: 'Comma-separated list of backend URLs to which incoming requests will be forwarded to in a random fashion. For example like: https://teams.microsoft.com/l/meetup-join/1,https://teams.microsoft.com/l/meetup-join/2'
   }
 }
+
+param numberOfBackendUrls string {
+  default: '1'
+  metadata: {
+    description: 'Number of backend URLs when using the large event API which is backed by Table storage'
+  }
+}
+
 param apimPublisherName string {
   default: 'Contoso Admin'
-  metadata:{
+  metadata: {
     description: 'API Management Publisher Name'
   }
 }
 
 param apimPublisherEmail string {
   default: 'noreply@contoso.com'
-  metadata:{
+  metadata: {
     description: 'API Management Publisher Email Address'
   }
 }
@@ -56,6 +64,7 @@ module apimPrimaryRegion 'module_apim.bicep' = {
     applicationInsightsName: appinsights.name
     location: location
     backends: backends
+    numberOfBackendUrls: numberOfBackendUrls
     prefix: prefix
     publisherEmail: apimPublisherEmail
     publisherName: apimPublisherName
@@ -68,6 +77,7 @@ module apimSecondaryRegion 'module_apim.bicep' = {
     applicationInsightsName: appinsights.name
     location: locationSecondary
     backends: backends
+    numberOfBackendUrls: numberOfBackendUrls
     prefix: prefix
     publisherEmail: apimPublisherEmail
     publisherName: apimPublisherName
