@@ -16,13 +16,6 @@ param backends string {
   }
 }
 
-param numberOfBackendUrls string {
-  default: '1'
-  metadata: {
-    description: 'Number of backend URLs when using the large event API which is backed by Table storage'
-  }
-}
-
 param apimPublisherName string {
   default: 'Contoso Admin'
   metadata: {
@@ -64,7 +57,6 @@ module apimPrimaryRegion 'module_apim.bicep' = {
     applicationInsightsName: appinsights.name
     location: location
     backends: backends
-    numberOfBackendUrls: numberOfBackendUrls
     prefix: prefix
     publisherEmail: apimPublisherEmail
     publisherName: apimPublisherName
@@ -77,7 +69,6 @@ module apimSecondaryRegion 'module_apim.bicep' = {
     applicationInsightsName: appinsights.name
     location: locationSecondary
     backends: backends
-    numberOfBackendUrls: numberOfBackendUrls
     prefix: prefix
     publisherEmail: apimPublisherEmail
     publisherName: apimPublisherName

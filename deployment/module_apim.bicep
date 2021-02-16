@@ -5,8 +5,6 @@ param publisherName string
 
 param backends string
 
-param numberOfBackendUrls string = '1'
-
 param applicationInsightsName string
 
 resource storageAccount 'Microsoft.Storage/storageAccounts@2019-06-01' = {
@@ -110,11 +108,10 @@ resource getbackendFromTablePolicy 'Microsoft.ApiManagement/service/apis/operati
   dependsOn: [
     namedValueTableUrl
     namedValueTableSasToken
-    namedValueTableEntityCount
   ]
   properties: {
     format: 'xml'
-    value: '<policies>\r\n  <inbound>\r\n    <base />\r\n    <!-- Make outbound request to the table API which holds the list of backend URLs -->\r\n    <send-request mode="new" response-variable-name="tableApiResponse" timeout="20" ignore-error="true">\r\n      <set-url>@{\r\n                // Generate random rowKey\r\n                var rowKey = new Random(context.RequestId.GetHashCode()).Next(0, int.Parse("{{table-entity-count}}"));\r\n                // construct query URL\r\n                var tableUrl = "{{table-url}}(PartitionKey=\'event1\',RowKey=\'" + rowKey + "\')?{{table-sas-token}}&amp;$select=url";\r\n                return tableUrl;\r\n            }</set-url>\r\n      <set-method>GET</set-method>\r\n      <set-header name="Accept" exists-action="override">\r\n        <value>application/json;odata=nometadata</value>\r\n      </set-header>\r\n    </send-request>\r\n    <set-method>GET</set-method>\r\n    <return-response>\r\n      <set-status code="302" />\r\n      <set-header name="Location" exists-action="override">\r\n        <value>@{\r\n                    var url = (string)((IResponse) context.Variables["tableApiResponse"]).Body.As&lt;JObject&gt;()["url"];\r\n                    return url;\r\n                }</value>\r\n      </set-header>\r\n    </return-response>\r\n  </inbound>\r\n  <backend>\r\n    <base />\r\n  </backend>\r\n  <outbound>\r\n    <base />\r\n  </outbound>\r\n  <on-error>\r\n    <base />\r\n  </on-error>\r\n</policies>'
+    value: '<policies>\r\n  <inbound>\r\n    <base />\r\n    <!-- Make outbound request to the table API which holds the list of backend URLs -->\r\n    <send-request mode="new" response-variable-name="tableApiResponse" timeout="20" ignore-error="true">\r\n      <set-url>@("{{table-url}}?{{table-sas-token}}&amp;$select=url")</set-url>\r\n      <set-method>GET</set-method>\r\n      <set-header name="Accept" exists-action="override">\r\n        <value>application/json;odata=nometadata</value>\r\n      </set-header>\r\n    </send-request>\r\n    <set-method>GET</set-method>\r\n    <return-response>\r\n      <set-status code="302" />\r\n      <set-header name="Location" exists-action="override">\r\n        <value>@{\r\n                    var urls = ((IResponse) context.Variables["tableApiResponse"]).Body.As&lt;JObject&gt;()["value"];\r\n                    // Generate random rowKey\r\n                    var rowKey = new Random(context.RequestId.GetHashCode()).Next(0, urls.Count());\r\n                    return (string)urls[rowKey]["url"];\r\n                }</value>\r\n      </set-header>\r\n    </return-response>\r\n  </inbound>\r\n  <backend>\r\n    <base />\r\n  </backend>\r\n  <outbound>\r\n    <base />\r\n  </outbound>\r\n  <on-error>\r\n    <base />\r\n  </on-error>\r\n</policies>'
   }
 }
 
@@ -138,7 +135,8 @@ resource namedValueTableUrl 'Microsoft.ApiManagement/service/namedValues@2020-06
 var accountSasProperties = {
   signedServices: 't'
   signedPermission: 'rl'
-  signedExpiry: '2022-03-01T00:00:01Z'
+  signedStart: '2021-02-01T00:00:01Z'
+  signedExpiry: '2023-03-01T00:00:01Z'
   signedResourceTypes: 'o'
 }
 
@@ -146,16 +144,8 @@ resource namedValueTableSasToken 'Microsoft.ApiManagement/service/namedValues@20
   name: '${apim.name}/table-sas-token'
   properties: {
     displayName: 'table-sas-token'
-    value: uriComponentToString(listAccountSas(storageAccount.name, storageAccount.apiVersion, accountSasProperties).accountSasToken)
+    value: listAccountSas(storageAccount.name, storageAccount.apiVersion, accountSasProperties).accountSasToken
     secret: true
-  }
-}
-
-resource namedValueTableEntityCount 'Microsoft.ApiManagement/service/namedValues@2020-06-01-preview' = {
-  name: '${apim.name}/table-entity-count'
-  properties: {
-    displayName: 'table-entity-count'
-    value: numberOfBackendUrls
   }
 }
 
