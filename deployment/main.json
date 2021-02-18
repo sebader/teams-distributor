@@ -410,7 +410,7 @@
             {
               "type": "Microsoft.Storage/storageAccounts",
               "apiVersion": "2019-06-01",
-              "name": "[format('{0}{1}stg', parameters('prefix'), parameters('location'))]",
+              "name": "[take(format('stg{0}{1}', parameters('location'), replace(guid(resourceGroup().name, parameters('location'), 'stg'), '-', '')), 22)]",
               "location": "[parameters('location')]",
               "kind": "StorageV2",
               "sku": {
@@ -424,9 +424,9 @@
             {
               "type": "Microsoft.Storage/storageAccounts/tableServices/tables",
               "apiVersion": "2019-06-01",
-              "name": "[format('{0}/default/Urls', format('{0}{1}stg', parameters('prefix'), parameters('location')))]",
+              "name": "[format('{0}/default/Urls', take(format('stg{0}{1}', parameters('location'), replace(guid(resourceGroup().name, parameters('location'), 'stg'), '-', '')), 22))]",
               "dependsOn": [
-                "[resourceId('Microsoft.Storage/storageAccounts', format('{0}{1}stg', parameters('prefix'), parameters('location')))]"
+                "[resourceId('Microsoft.Storage/storageAccounts', take(format('stg{0}{1}', parameters('location'), replace(guid(resourceGroup().name, parameters('location'), 'stg'), '-', '')), 22))]"
               ]
             },
             {
@@ -563,11 +563,11 @@
               "name": "[format('{0}/table-url', format('{0}{1}apim', parameters('prefix'), parameters('location')))]",
               "properties": {
                 "displayName": "table-url",
-                "value": "[format('{0}Urls', reference(resourceId('Microsoft.Storage/storageAccounts', format('{0}{1}stg', parameters('prefix'), parameters('location')))).primaryEndpoints.table)]"
+                "value": "[format('{0}Urls', reference(resourceId('Microsoft.Storage/storageAccounts', take(format('stg{0}{1}', parameters('location'), replace(guid(resourceGroup().name, parameters('location'), 'stg'), '-', '')), 22))).primaryEndpoints.table)]"
               },
               "dependsOn": [
                 "[resourceId('Microsoft.ApiManagement/service', format('{0}{1}apim', parameters('prefix'), parameters('location')))]",
-                "[resourceId('Microsoft.Storage/storageAccounts', format('{0}{1}stg', parameters('prefix'), parameters('location')))]"
+                "[resourceId('Microsoft.Storage/storageAccounts', take(format('stg{0}{1}', parameters('location'), replace(guid(resourceGroup().name, parameters('location'), 'stg'), '-', '')), 22))]"
               ]
             },
             {
@@ -576,12 +576,12 @@
               "name": "[format('{0}/table-sas-token', format('{0}{1}apim', parameters('prefix'), parameters('location')))]",
               "properties": {
                 "displayName": "table-sas-token",
-                "value": "[listAccountSas(format('{0}{1}stg', parameters('prefix'), parameters('location')), '2019-06-01', variables('accountSasProperties')).accountSasToken]",
+                "value": "[listAccountSas(take(format('stg{0}{1}', parameters('location'), replace(guid(resourceGroup().name, parameters('location'), 'stg'), '-', '')), 22), '2019-06-01', variables('accountSasProperties')).accountSasToken]",
                 "secret": true
               },
               "dependsOn": [
                 "[resourceId('Microsoft.ApiManagement/service', format('{0}{1}apim', parameters('prefix'), parameters('location')))]",
-                "[resourceId('Microsoft.Storage/storageAccounts', format('{0}{1}stg', parameters('prefix'), parameters('location')))]"
+                "[resourceId('Microsoft.Storage/storageAccounts', take(format('stg{0}{1}', parameters('location'), replace(guid(resourceGroup().name, parameters('location'), 'stg'), '-', '')), 22))]"
               ]
             },
             {
@@ -714,7 +714,7 @@
             {
               "type": "Microsoft.Storage/storageAccounts",
               "apiVersion": "2019-06-01",
-              "name": "[format('{0}{1}stg', parameters('prefix'), parameters('location'))]",
+              "name": "[take(format('stg{0}{1}', parameters('location'), replace(guid(resourceGroup().name, parameters('location'), 'stg'), '-', '')), 22)]",
               "location": "[parameters('location')]",
               "kind": "StorageV2",
               "sku": {
@@ -728,9 +728,9 @@
             {
               "type": "Microsoft.Storage/storageAccounts/tableServices/tables",
               "apiVersion": "2019-06-01",
-              "name": "[format('{0}/default/Urls', format('{0}{1}stg', parameters('prefix'), parameters('location')))]",
+              "name": "[format('{0}/default/Urls', take(format('stg{0}{1}', parameters('location'), replace(guid(resourceGroup().name, parameters('location'), 'stg'), '-', '')), 22))]",
               "dependsOn": [
-                "[resourceId('Microsoft.Storage/storageAccounts', format('{0}{1}stg', parameters('prefix'), parameters('location')))]"
+                "[resourceId('Microsoft.Storage/storageAccounts', take(format('stg{0}{1}', parameters('location'), replace(guid(resourceGroup().name, parameters('location'), 'stg'), '-', '')), 22))]"
               ]
             },
             {
@@ -867,11 +867,11 @@
               "name": "[format('{0}/table-url', format('{0}{1}apim', parameters('prefix'), parameters('location')))]",
               "properties": {
                 "displayName": "table-url",
-                "value": "[format('{0}Urls', reference(resourceId('Microsoft.Storage/storageAccounts', format('{0}{1}stg', parameters('prefix'), parameters('location')))).primaryEndpoints.table)]"
+                "value": "[format('{0}Urls', reference(resourceId('Microsoft.Storage/storageAccounts', take(format('stg{0}{1}', parameters('location'), replace(guid(resourceGroup().name, parameters('location'), 'stg'), '-', '')), 22))).primaryEndpoints.table)]"
               },
               "dependsOn": [
                 "[resourceId('Microsoft.ApiManagement/service', format('{0}{1}apim', parameters('prefix'), parameters('location')))]",
-                "[resourceId('Microsoft.Storage/storageAccounts', format('{0}{1}stg', parameters('prefix'), parameters('location')))]"
+                "[resourceId('Microsoft.Storage/storageAccounts', take(format('stg{0}{1}', parameters('location'), replace(guid(resourceGroup().name, parameters('location'), 'stg'), '-', '')), 22))]"
               ]
             },
             {
@@ -880,12 +880,12 @@
               "name": "[format('{0}/table-sas-token', format('{0}{1}apim', parameters('prefix'), parameters('location')))]",
               "properties": {
                 "displayName": "table-sas-token",
-                "value": "[listAccountSas(format('{0}{1}stg', parameters('prefix'), parameters('location')), '2019-06-01', variables('accountSasProperties')).accountSasToken]",
+                "value": "[listAccountSas(take(format('stg{0}{1}', parameters('location'), replace(guid(resourceGroup().name, parameters('location'), 'stg'), '-', '')), 22), '2019-06-01', variables('accountSasProperties')).accountSasToken]",
                 "secret": true
               },
               "dependsOn": [
                 "[resourceId('Microsoft.ApiManagement/service', format('{0}{1}apim', parameters('prefix'), parameters('location')))]",
-                "[resourceId('Microsoft.Storage/storageAccounts', format('{0}{1}stg', parameters('prefix'), parameters('location')))]"
+                "[resourceId('Microsoft.Storage/storageAccounts', take(format('stg{0}{1}', parameters('location'), replace(guid(resourceGroup().name, parameters('location'), 'stg'), '-', '')), 22))]"
               ]
             },
             {

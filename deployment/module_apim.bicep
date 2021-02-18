@@ -8,7 +8,7 @@ param backends string
 param applicationInsightsName string
 
 resource storageAccount 'Microsoft.Storage/storageAccounts@2019-06-01' = {
-  name: '${prefix}${location}stg'
+  name: take('stg${location}${replace(guid(resourceGroup().name, location, 'stg'), '-', '')}', 22) // build unique storage account name from 'stg', location and guid()
   location: location
   kind: 'StorageV2'
   sku: {
