@@ -4,7 +4,6 @@ param prefix string {
   }
 }
 param locationSecondary string {
-  default: 'northeurope'
   metadata: {
     description: 'Region of the second API Management instance. Needs to be different than the location of the resource group which is being used as the primary location. Must support APIM Consumption tier.'
   }
