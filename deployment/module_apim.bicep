@@ -4,10 +4,15 @@ param publisherEmail string
 param publisherName string
 
 param backends string
+param useTableStorage bool
 
 param applicationInsightsName string
 
-resource storageAccount 'Microsoft.Storage/storageAccounts@2019-06-01' = {
+param sasTokenStart string = utcNow('yyyy-MM-ddTHH:mm:ssZ')
+param sasTokenExpiry string = dateTimeAdd(utcNow('u'), 'P2Y', 'yyyy-MM-ddTHH:mm:ssZ') // Expries in 2 years from deployment time
+
+
+resource storageAccount 'Microsoft.Storage/storageAccounts@2019-06-01'  = if(useTableStorage) {
   name: take('stg${location}${replace(guid(resourceGroup().name, location, 'stg'), '-', '')}', 22) // build unique storage account name from 'stg', location and guid()
   location: location
   kind: 'StorageV2'
@@ -20,8 +25,10 @@ resource storageAccount 'Microsoft.Storage/storageAccounts@2019-06-01' = {
   }
 }
 
-resource table 'Microsoft.Storage/storageAccounts/tableServices/tables@2019-06-01' = {
-  name: '${storageAccount.name}/default/Urls'
+var tableName = 'Urls'
+
+resource table 'Microsoft.Storage/storageAccounts/tableServices/tables@2019-06-01' = if(useTableStorage) {
+  name: '${storageAccount.name}/default/${tableName}'
 }
 
 resource apim 'Microsoft.ApiManagement/service@2020-06-01-preview' = {
@@ -67,21 +74,22 @@ resource apiHealthz 'Microsoft.ApiManagement/service/apis@2020-06-01-preview' = 
   }
 }
 
-resource operationGetbackend 'Microsoft.ApiManagement/service/apis/operations@2020-06-01-preview' = {
-  name: '${apiGetbackend.name}/getbackend'
+// Based on the parameter useTableStorage either this operation is being created...
+resource operationGetbackend 'Microsoft.ApiManagement/service/apis/operations@2020-06-01-preview' = if(!useTableStorage)  {
+  name: '${apiGetbackend.name}/getbackendfrompolicy'
   properties: {
-    displayName: 'GetBackend'
+    displayName: 'Get Backend From Policy'
     method: 'GET'
     urlTemplate: '/'
   }
 }
-
-resource operationGetbackendFromTable 'Microsoft.ApiManagement/service/apis/operations@2020-06-01-preview' = {
+// ... or this operation is being used. This one will retrieve the backend URLs from the Table storage.
+resource operationGetbackendFromTable 'Microsoft.ApiManagement/service/apis/operations@2020-06-01-preview' = if(useTableStorage) {
   name: '${apiGetbackend.name}/getbackendfromtable'
   properties: {
-    displayName: 'GetBackendLargeEvents'
+    displayName: 'Get Backend From Table Storage'
     method: 'GET'
-    urlTemplate: '/largeevent'
+    urlTemplate: '/'
   }
 }
 
@@ -94,7 +102,7 @@ resource operationHealthz 'Microsoft.ApiManagement/service/apis/operations@2020-
   }
 }
 
-resource getbackendPolicy 'Microsoft.ApiManagement/service/apis/operations/policies@2020-06-01-preview' = {
+resource getbackendPolicy 'Microsoft.ApiManagement/service/apis/operations/policies@2020-06-01-preview' = if(!useTableStorage) {
   name: '${operationGetbackend.name}/policy'
   properties: {
     format: 'xml'
@@ -103,7 +111,7 @@ resource getbackendPolicy 'Microsoft.ApiManagement/service/apis/operations/polic
   }
 }
 
-resource getbackendFromTablePolicy 'Microsoft.ApiManagement/service/apis/operations/policies@2020-06-01-preview' = {
+resource getbackendFromTablePolicy 'Microsoft.ApiManagement/service/apis/operations/policies@2020-06-01-preview' = if(useTableStorage) {
   name: '${operationGetbackendFromTable.name}/policy'
   dependsOn: [
     namedValueTableUrl
@@ -123,24 +131,25 @@ resource healthzPolicy 'Microsoft.ApiManagement/service/apis/operations/policies
   }
 }
 
-// Section: named values for Table backend
-resource namedValueTableUrl 'Microsoft.ApiManagement/service/namedValues@2020-06-01-preview' = {
+// Section: named values for Table storage backend
+resource namedValueTableUrl 'Microsoft.ApiManagement/service/namedValues@2020-06-01-preview' = if(useTableStorage) {
   name: '${apim.name}/table-url'
   properties: {
     displayName: 'table-url'
-    value: '${storageAccount.properties.primaryEndpoints.table}Urls'
+    value: '${storageAccount.properties.primaryEndpoints.table}${tableName}'
   }
 }
 
+// Table storage sas token properties
 var accountSasProperties = {
-  signedServices: 't'
-  signedPermission: 'rl'
-  signedStart: '2021-02-01T00:00:01Z'
-  signedExpiry: '2023-03-01T00:00:01Z'
-  signedResourceTypes: 'o'
+  signedServices: 't' // only valid on Table endpoint
+  signedPermission: 'rl' // Permissions: read and list
+  signedResourceTypes: 'o' // object-level
+  signedStart: sasTokenStart
+  signedExpiry: sasTokenExpiry
 }
 
-resource namedValueTableSasToken 'Microsoft.ApiManagement/service/namedValues@2020-06-01-preview' = {
+resource namedValueTableSasToken 'Microsoft.ApiManagement/service/namedValues@2020-06-01-preview' = if(useTableStorage) {
   name: '${apim.name}/table-sas-token'
   properties: {
     displayName: 'table-sas-token'

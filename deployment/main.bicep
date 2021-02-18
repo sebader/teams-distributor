@@ -9,9 +9,16 @@ param locationSecondary string {
   }
 }
 
-param backends string {
+param useTableStorage bool {
   metadata: {
-    description: 'Comma-separated list of backend URLs to which incoming requests will be forwarded to in a random fashion. For example like: https://teams.microsoft.com/l/meetup-join/1,https://teams.microsoft.com/l/meetup-join/2'
+    description: 'Set to True if you are using many (> 10) backend URLS. In this case a Table Storage will be created which you need to fill afterwards.'
+  }
+}
+
+param backends string {
+  default: ''
+  metadata: {
+    description: 'Leave blank if you set the parameter useTableStorage to True. Comma-separated list of backend URLs to which incoming requests will be forwarded to in a random fashion. For example like: https://teams.microsoft.com/l/meetup-join/1,https://teams.microsoft.com/l/meetup-join/2'
   }
 }
 
@@ -59,6 +66,7 @@ module apimPrimaryRegion 'module_apim.bicep' = {
     prefix: prefix
     publisherEmail: apimPublisherEmail
     publisherName: apimPublisherName
+    useTableStorage: useTableStorage
   }
 }
 
@@ -71,6 +79,7 @@ module apimSecondaryRegion 'module_apim.bicep' = {
     prefix: prefix
     publisherEmail: apimPublisherEmail
     publisherName: apimPublisherName
+    useTableStorage: useTableStorage
   }
 }
 
