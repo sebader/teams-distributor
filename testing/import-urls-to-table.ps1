@@ -7,6 +7,9 @@ Install-Module AzTable
 # Login to Azure with a browser sign-in token
 Connect-AzAccount
 
+# Set to the subscription ID in which the solution got deployed in
+Set-AzContext -Subscription "xxxx-xxxx-xxxx-xxxx"
+
 # url-list.txt needs to contain the list of backend URLs, one per line
 $urls = Get-Content sample-url-list.txt
 
