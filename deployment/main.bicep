@@ -10,6 +10,7 @@ param locationSecondary string {
 }
 
 param useTableStorage bool {
+  default: false
   metadata: {
     description: 'Set to True if you are using many (> 10) backend URLS. In this case a Table Storage will be created which you need to fill afterwards.'
   }
