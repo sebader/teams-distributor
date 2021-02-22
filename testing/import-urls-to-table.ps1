@@ -1,6 +1,14 @@
-Install-Module AzTable
+# Script to load the URL into all Azure Storage accounts deployed as part of the Teams load-balancing solution
 
-$urls = Get-Content sample-url-list.txt # url-list.txt needs to contain the list of backend URLs, one per line
+# Install Azure PowerShell
+# https://docs.microsoft.com/en-us/powershell/azure/install-az-ps?view=azps-5.5.0
+# This is the only Az module required for this script (you don't have to install all Az modules)
+Install-Module AzTable
+# Login to Azure with a browser sign-in token
+Connect-AzAccount
+
+# url-list.txt needs to contain the list of backend URLs, one per line
+$urls = Get-Content sample-url-list.txt
 
 Write-Host "Fount $($urls.Count) URLs to import"
 
