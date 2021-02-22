@@ -18,6 +18,7 @@ The solution deploys three components:
 - Azure Front Door for global load balancing and failover
 - 2x Azure API Management in Consumption tier, in two different regions for resiliency
 - Azure Application Insights including on Azure Portal Dashboard for monitoring
+- Optional: Two Azure Storage Accounts with one Table storage each. Only deployed when using a high number of backend URLs
 
 <p align="center">
     <br>
@@ -40,21 +41,37 @@ While the solution was originally built for Teams Live Events, it can easily be 
 bicep build main.bicep
 ```
 ### Deploy to Azure
-Create resource group
+Create resource group (change the location based on your needs)
 ```
 az group create -n myresource-group -l northeurope
 ```
 
-Deploy generated ARM template - replace with your individual Event URLs here
+There are two different deployment types available, based on how many backend URLs you need to distribute traffic to. (the reason for this is a length limitation in API Management Policy definitions).
+
+#### Policy-based mode - **this mode should be applicable to most users.**
+Use this when the list of all your backend URLs is not longer than approx. 14,000 characters. In this case the lift of URLs is injected directly into the policy of API Management. 
+
+Use this command to deploy the ARM template - replace the **backends** parameter with your individual Event URLs and  **locationSecondary** based on your preferences.
 ```
-az deployment group create -g  myresource-group --template-file .\main.json -p prefix=myprefix -p backends="https://teams.microsoft.com/l/meetup-join/1,https://teams.microsoft.com/l/meetup-join/2,https://teams.microsoft.com/l/meetup-join/3"
+az deployment group create -g  myresource-group --template-file .\main.json -p prefix=myprefix -p locationSecondary=westeurope -p backends="https://teams.microsoft.com/l/meetup-join/1,https://teams.microsoft.com/l/meetup-join/2,https://teams.microsoft.com/l/meetup-join/3"
 ```
 
-Alternatively you can deploy through the Azure Portal directly:
+#### Table-storage mode - for high number of backend URLs
+In this case the URLs are imported after the ARM template deployment into Table storage accounts and APIM fetches them from there. See below for details on this. \
+Use this command to deploy the ARM template - replace the **locationSecondary** parameter based on your preferences. Note that we are not specifying the URLs here yet and instead setting the parameter `useTableStorage=true`.
+```
+az deployment group create -g  myresource-group --template-file .\main.json -p prefix=myprefix -p locationSecondary=westeurope -p useTableStorage=true
+```
+
+After the deployment finished, you need to import the list of URLs into both Table storage accounts. Use the `import-urls-to-table.ps1` PowerShell script in the `testing` folder for this purpose.
+
+#### Deploy through the Azure Portal
+As an alternative to using command line, you can also deploy through the Azure Portal directly and set the parameters accordingly.
 
 [![Deploy to Azure](https://aka.ms/deploytoazurebutton)](https://portal.azure.com/#create/Microsoft.Template/uri/https%3A%2F%2Fraw.githubusercontent.com%2Fsebader%2Fteams-distributor%2Fmain%2Fdeployment%2Fmain.json)
 
-Your initial URL - if you did not use a custom domain - will be like [https://{MYPREFIX}globalfrontdoor.azurefd.net]()
+### Test
+Your initial URL - if you did not use a custom domain - will be like [https://{MYPREFIX}globalfrontdoor.azurefd.net]()- To test your setup, simply call this URL from a web browser and you should get redirected to one of your backend URLs. Try this a couple of times and you will see different forwarding targets. Note: Based on your browser or proxy settings, it might be that the forward target gets cached. In this case, just open a second browser (or use a private browsing tab). 
 
 _Note: After the first deployment it can take a couple of minutes until the Front Door URL goes lives and starts to your traffic_
 
