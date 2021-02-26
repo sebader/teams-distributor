@@ -11,9 +11,9 @@ param applicationInsightsName string
 param sasTokenStart string = utcNow('yyyy-MM-ddTHH:mm:ssZ')
 param sasTokenExpiry string = dateTimeAdd(utcNow('u'), 'P2Y', 'yyyy-MM-ddTHH:mm:ssZ') // Expries in 2 years from deployment time
 
-
-resource storageAccount 'Microsoft.Storage/storageAccounts@2019-06-01'  = if(useTableStorage) {
-  name: take('stg${location}${replace(guid(resourceGroup().name, location, 'stg'), '-', '')}', 22) // build unique storage account name from 'stg', location and guid()
+// Because of some issue in bicep/ARM using "if (useTableStorage)" on this resource breaks other dependencies. Thus, we always provision the storage account, even if it is not being used when not running in Table-storage mode.
+resource storageAccount 'Microsoft.Storage/storageAccounts@2019-06-01' = {
+  name: 'stg${take(location, 8)}${uniqueString(prefix, location, 'stg')}'
   location: location
   kind: 'StorageV2'
   sku: {
@@ -27,7 +27,7 @@ resource storageAccount 'Microsoft.Storage/storageAccounts@2019-06-01'  = if(use
 
 var tableName = 'Urls'
 
-resource table 'Microsoft.Storage/storageAccounts/tableServices/tables@2019-06-01' = if(useTableStorage) {
+resource table 'Microsoft.Storage/storageAccounts/tableServices/tables@2019-06-01' = if (useTableStorage) {
   name: '${storageAccount.name}/default/${tableName}'
 }
 
@@ -75,7 +75,7 @@ resource apiHealthz 'Microsoft.ApiManagement/service/apis@2020-06-01-preview' = 
 }
 
 // Based on the parameter useTableStorage either this operation is being created...
-resource operationGetbackend 'Microsoft.ApiManagement/service/apis/operations@2020-06-01-preview' = if(!useTableStorage)  {
+resource operationGetbackend 'Microsoft.ApiManagement/service/apis/operations@2020-06-01-preview' = if (!useTableStorage) {
   name: '${apiGetbackend.name}/getbackendfrompolicy'
   properties: {
     displayName: 'Get Backend From Policy'
@@ -84,7 +84,7 @@ resource operationGetbackend 'Microsoft.ApiManagement/service/apis/operations@20
   }
 }
 // ... or this operation is being used. This one will retrieve the backend URLs from the Table storage.
-resource operationGetbackendFromTable 'Microsoft.ApiManagement/service/apis/operations@2020-06-01-preview' = if(useTableStorage) {
+resource operationGetbackendFromTable 'Microsoft.ApiManagement/service/apis/operations@2020-06-01-preview' = if (useTableStorage) {
   name: '${apiGetbackend.name}/getbackendfromtable'
   properties: {
     displayName: 'Get Backend From Table Storage'
@@ -102,16 +102,16 @@ resource operationHealthz 'Microsoft.ApiManagement/service/apis/operations@2020-
   }
 }
 
-resource getbackendPolicy 'Microsoft.ApiManagement/service/apis/operations/policies@2020-06-01-preview' = if(!useTableStorage) {
+resource getbackendPolicy 'Microsoft.ApiManagement/service/apis/operations/policies@2020-06-01-preview' = if (!useTableStorage) {
   name: '${operationGetbackend.name}/policy'
   properties: {
     format: 'xml'
     // The 'backends' parameter gets injected into the policy here (scroll further to the right)
-    value: '<policies>\r\n  <inbound>\r\n    <base />\r\n    <return-response>\r\n      <set-status code="302" />\r\n      <set-header name="Location" exists-action="override">\r\n        <value>@{\r\n                    var backends = "${backends}".Split(\',\');\r\n                    var i = new Random(context.RequestId.GetHashCode()).Next(0, backends.Length);\r\n                    return backends[i];\r\n                }</value>\r\n      </set-header>\r\n    </return-response>\r\n  </inbound>\r\n  <backend>\r\n    <base />\r\n  </backend>\r\n  <outbound>\r\n    <base />\r\n  </outbound>\r\n  <on-error>\r\n    <base />\r\n  </on-error>\r\n</policies>'
+    value: '<policies>\r\n  <inbound>\r\n    <base />\r\n    <return-response>\r\n      <set-status code="302" />\r\n      <set-header name="X-Apim-Region" exists-action="override">\r\n        <value>@(context.Deployment.Region)</value>\r\n      </set-header>\r\n      <set-header name="Location" exists-action="override">\r\n        <value>@{\r\n                    var backends = "${backends}".Split(\',\');\r\n                    var i = new Random(context.RequestId.GetHashCode()).Next(0, backends.Length);\r\n                    return backends[i];\r\n                }</value>\r\n      </set-header>\r\n    </return-response>\r\n  </inbound>\r\n  <backend>\r\n    <base />\r\n  </backend>\r\n  <outbound>\r\n    <base />\r\n  </outbound>\r\n  <on-error>\r\n    <base />\r\n  </on-error>\r\n</policies>'
   }
 }
 
-resource getbackendFromTablePolicy 'Microsoft.ApiManagement/service/apis/operations/policies@2020-06-01-preview' = if(useTableStorage) {
+resource getbackendFromTablePolicy 'Microsoft.ApiManagement/service/apis/operations/policies@2020-06-01-preview' = if (useTableStorage) {
   name: '${operationGetbackendFromTable.name}/policy'
   dependsOn: [
     namedValueTableUrl
@@ -132,7 +132,7 @@ resource healthzPolicy 'Microsoft.ApiManagement/service/apis/operations/policies
 }
 
 // Section: named values for Table storage backend
-resource namedValueTableUrl 'Microsoft.ApiManagement/service/namedValues@2020-06-01-preview' = if(useTableStorage) {
+resource namedValueTableUrl 'Microsoft.ApiManagement/service/namedValues@2020-06-01-preview' = if (useTableStorage) {
   name: '${apim.name}/table-url'
   properties: {
     displayName: 'table-url'
@@ -149,7 +149,7 @@ var accountSasProperties = {
   signedExpiry: sasTokenExpiry
 }
 
-resource namedValueTableSasToken 'Microsoft.ApiManagement/service/namedValues@2020-06-01-preview' = if(useTableStorage) {
+resource namedValueTableSasToken 'Microsoft.ApiManagement/service/namedValues@2020-06-01-preview' = if (useTableStorage) {
   name: '${apim.name}/table-sas-token'
   properties: {
     displayName: 'table-sas-token'

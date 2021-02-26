@@ -209,7 +209,7 @@ resource frontdoor 'Microsoft.Network/frontDoors@2020-05-01' = {
 }
 
 resource dashboard 'Microsoft.Portal/dashboards@2015-08-01-preview' = {
-  name: guid(resourceGroup().name, 'dashboard')
+  name: guid(resourceGroup().name, prefix, 'dashboard')
   location: location
   tags: {
     'hidden-title': 'Teams Distributor Statistics'

@@ -189,7 +189,7 @@
     {
       "type": "Microsoft.Portal/dashboards",
       "apiVersion": "2015-08-01-preview",
-      "name": "[guid(resourceGroup().name, 'dashboard')]",
+      "name": "[guid(resourceGroup().name, parameters('prefix'), 'dashboard')]",
       "location": "[variables('location')]",
       "tags": {
         "hidden-title": "Teams Distributor Statistics"
@@ -431,10 +431,9 @@
           },
           "resources": [
             {
-              "condition": "[parameters('useTableStorage')]",
               "type": "Microsoft.Storage/storageAccounts",
               "apiVersion": "2019-06-01",
-              "name": "[take(format('stg{0}{1}', parameters('location'), replace(guid(resourceGroup().name, parameters('location'), 'stg'), '-', '')), 22)]",
+              "name": "[format('stg{0}{1}', take(parameters('location'), 8), uniqueString(parameters('prefix'), parameters('location'), 'stg'))]",
               "location": "[parameters('location')]",
               "kind": "StorageV2",
               "sku": {
@@ -449,9 +448,9 @@
               "condition": "[parameters('useTableStorage')]",
               "type": "Microsoft.Storage/storageAccounts/tableServices/tables",
               "apiVersion": "2019-06-01",
-              "name": "[format('{0}/default/{1}', take(format('stg{0}{1}', parameters('location'), replace(guid(resourceGroup().name, parameters('location'), 'stg'), '-', '')), 22), variables('tableName'))]",
+              "name": "[format('{0}/default/{1}', format('stg{0}{1}', take(parameters('location'), 8), uniqueString(parameters('prefix'), parameters('location'), 'stg')), variables('tableName'))]",
               "dependsOn": [
-                "[resourceId('Microsoft.Storage/storageAccounts', take(format('stg{0}{1}', parameters('location'), replace(guid(resourceGroup().name, parameters('location'), 'stg'), '-', '')), 22))]"
+                "[resourceId('Microsoft.Storage/storageAccounts', format('stg{0}{1}', take(parameters('location'), 8), uniqueString(parameters('prefix'), parameters('location'), 'stg')))]"
               ]
             },
             {
@@ -553,7 +552,7 @@
               "name": "[format('{0}/policy', format('{0}/getbackendfrompolicy', format('{0}/getbackend', format('{0}{1}apim', parameters('prefix'), parameters('location')))))]",
               "properties": {
                 "format": "xml",
-                "value": "[format('<policies>\r\n  <inbound>\r\n    <base />\r\n    <return-response>\r\n      <set-status code=\"302\" />\r\n      <set-header name=\"Location\" exists-action=\"override\">\r\n        <value>@{{\r\n                    var backends = \"{0}\".Split('','');\r\n                    var i = new Random(context.RequestId.GetHashCode()).Next(0, backends.Length);\r\n                    return backends[i];\r\n                }}</value>\r\n      </set-header>\r\n    </return-response>\r\n  </inbound>\r\n  <backend>\r\n    <base />\r\n  </backend>\r\n  <outbound>\r\n    <base />\r\n  </outbound>\r\n  <on-error>\r\n    <base />\r\n  </on-error>\r\n</policies>', parameters('backends'))]"
+                "value": "[format('<policies>\r\n  <inbound>\r\n    <base />\r\n    <return-response>\r\n      <set-status code=\"302\" />\r\n      <set-header name=\"X-Apim-Region\" exists-action=\"override\">\r\n        <value>@(context.Deployment.Region)</value>\r\n      </set-header>\r\n      <set-header name=\"Location\" exists-action=\"override\">\r\n        <value>@{{\r\n                    var backends = \"{0}\".Split('','');\r\n                    var i = new Random(context.RequestId.GetHashCode()).Next(0, backends.Length);\r\n                    return backends[i];\r\n                }}</value>\r\n      </set-header>\r\n    </return-response>\r\n  </inbound>\r\n  <backend>\r\n    <base />\r\n  </backend>\r\n  <outbound>\r\n    <base />\r\n  </outbound>\r\n  <on-error>\r\n    <base />\r\n  </on-error>\r\n</policies>', parameters('backends'))]"
               },
               "dependsOn": [
                 "[resourceId('Microsoft.ApiManagement/service/apis/operations', split(format('{0}/getbackendfrompolicy', format('{0}/getbackend', format('{0}{1}apim', parameters('prefix'), parameters('location')))), '/')[0], split(format('{0}/getbackendfrompolicy', format('{0}/getbackend', format('{0}{1}apim', parameters('prefix'), parameters('location')))), '/')[1], split(format('{0}/getbackendfrompolicy', format('{0}/getbackend', format('{0}{1}apim', parameters('prefix'), parameters('location')))), '/')[2])]"
@@ -593,11 +592,11 @@
               "name": "[format('{0}/table-url', format('{0}{1}apim', parameters('prefix'), parameters('location')))]",
               "properties": {
                 "displayName": "table-url",
-                "value": "[format('{0}{1}', reference(resourceId('Microsoft.Storage/storageAccounts', take(format('stg{0}{1}', parameters('location'), replace(guid(resourceGroup().name, parameters('location'), 'stg'), '-', '')), 22))).primaryEndpoints.table, variables('tableName'))]"
+                "value": "[format('{0}{1}', reference(resourceId('Microsoft.Storage/storageAccounts', format('stg{0}{1}', take(parameters('location'), 8), uniqueString(parameters('prefix'), parameters('location'), 'stg')))).primaryEndpoints.table, variables('tableName'))]"
               },
               "dependsOn": [
                 "[resourceId('Microsoft.ApiManagement/service', format('{0}{1}apim', parameters('prefix'), parameters('location')))]",
-                "[resourceId('Microsoft.Storage/storageAccounts', take(format('stg{0}{1}', parameters('location'), replace(guid(resourceGroup().name, parameters('location'), 'stg'), '-', '')), 22))]"
+                "[resourceId('Microsoft.Storage/storageAccounts', format('stg{0}{1}', take(parameters('location'), 8), uniqueString(parameters('prefix'), parameters('location'), 'stg')))]"
               ]
             },
             {
@@ -607,12 +606,12 @@
               "name": "[format('{0}/table-sas-token', format('{0}{1}apim', parameters('prefix'), parameters('location')))]",
               "properties": {
                 "displayName": "table-sas-token",
-                "value": "[listAccountSas(take(format('stg{0}{1}', parameters('location'), replace(guid(resourceGroup().name, parameters('location'), 'stg'), '-', '')), 22), '2019-06-01', variables('accountSasProperties')).accountSasToken]",
+                "value": "[listAccountSas(format('stg{0}{1}', take(parameters('location'), 8), uniqueString(parameters('prefix'), parameters('location'), 'stg')), '2019-06-01', variables('accountSasProperties')).accountSasToken]",
                 "secret": true
               },
               "dependsOn": [
                 "[resourceId('Microsoft.ApiManagement/service', format('{0}{1}apim', parameters('prefix'), parameters('location')))]",
-                "[resourceId('Microsoft.Storage/storageAccounts', take(format('stg{0}{1}', parameters('location'), replace(guid(resourceGroup().name, parameters('location'), 'stg'), '-', '')), 22))]"
+                "[resourceId('Microsoft.Storage/storageAccounts', format('stg{0}{1}', take(parameters('location'), 8), uniqueString(parameters('prefix'), parameters('location'), 'stg')))]"
               ]
             },
             {
@@ -758,10 +757,9 @@
           },
           "resources": [
             {
-              "condition": "[parameters('useTableStorage')]",
               "type": "Microsoft.Storage/storageAccounts",
               "apiVersion": "2019-06-01",
-              "name": "[take(format('stg{0}{1}', parameters('location'), replace(guid(resourceGroup().name, parameters('location'), 'stg'), '-', '')), 22)]",
+              "name": "[format('stg{0}{1}', take(parameters('location'), 8), uniqueString(parameters('prefix'), parameters('location'), 'stg'))]",
               "location": "[parameters('location')]",
               "kind": "StorageV2",
               "sku": {
@@ -776,9 +774,9 @@
               "condition": "[parameters('useTableStorage')]",
               "type": "Microsoft.Storage/storageAccounts/tableServices/tables",
               "apiVersion": "2019-06-01",
-              "name": "[format('{0}/default/{1}', take(format('stg{0}{1}', parameters('location'), replace(guid(resourceGroup().name, parameters('location'), 'stg'), '-', '')), 22), variables('tableName'))]",
+              "name": "[format('{0}/default/{1}', format('stg{0}{1}', take(parameters('location'), 8), uniqueString(parameters('prefix'), parameters('location'), 'stg')), variables('tableName'))]",
               "dependsOn": [
-                "[resourceId('Microsoft.Storage/storageAccounts', take(format('stg{0}{1}', parameters('location'), replace(guid(resourceGroup().name, parameters('location'), 'stg'), '-', '')), 22))]"
+                "[resourceId('Microsoft.Storage/storageAccounts', format('stg{0}{1}', take(parameters('location'), 8), uniqueString(parameters('prefix'), parameters('location'), 'stg')))]"
               ]
             },
             {
@@ -880,7 +878,7 @@
               "name": "[format('{0}/policy', format('{0}/getbackendfrompolicy', format('{0}/getbackend', format('{0}{1}apim', parameters('prefix'), parameters('location')))))]",
               "properties": {
                 "format": "xml",
-                "value": "[format('<policies>\r\n  <inbound>\r\n    <base />\r\n    <return-response>\r\n      <set-status code=\"302\" />\r\n      <set-header name=\"Location\" exists-action=\"override\">\r\n        <value>@{{\r\n                    var backends = \"{0}\".Split('','');\r\n                    var i = new Random(context.RequestId.GetHashCode()).Next(0, backends.Length);\r\n                    return backends[i];\r\n                }}</value>\r\n      </set-header>\r\n    </return-response>\r\n  </inbound>\r\n  <backend>\r\n    <base />\r\n  </backend>\r\n  <outbound>\r\n    <base />\r\n  </outbound>\r\n  <on-error>\r\n    <base />\r\n  </on-error>\r\n</policies>', parameters('backends'))]"
+                "value": "[format('<policies>\r\n  <inbound>\r\n    <base />\r\n    <return-response>\r\n      <set-status code=\"302\" />\r\n      <set-header name=\"X-Apim-Region\" exists-action=\"override\">\r\n        <value>@(context.Deployment.Region)</value>\r\n      </set-header>\r\n      <set-header name=\"Location\" exists-action=\"override\">\r\n        <value>@{{\r\n                    var backends = \"{0}\".Split('','');\r\n                    var i = new Random(context.RequestId.GetHashCode()).Next(0, backends.Length);\r\n                    return backends[i];\r\n                }}</value>\r\n      </set-header>\r\n    </return-response>\r\n  </inbound>\r\n  <backend>\r\n    <base />\r\n  </backend>\r\n  <outbound>\r\n    <base />\r\n  </outbound>\r\n  <on-error>\r\n    <base />\r\n  </on-error>\r\n</policies>', parameters('backends'))]"
               },
               "dependsOn": [
                 "[resourceId('Microsoft.ApiManagement/service/apis/operations', split(format('{0}/getbackendfrompolicy', format('{0}/getbackend', format('{0}{1}apim', parameters('prefix'), parameters('location')))), '/')[0], split(format('{0}/getbackendfrompolicy', format('{0}/getbackend', format('{0}{1}apim', parameters('prefix'), parameters('location')))), '/')[1], split(format('{0}/getbackendfrompolicy', format('{0}/getbackend', format('{0}{1}apim', parameters('prefix'), parameters('location')))), '/')[2])]"
@@ -920,11 +918,11 @@
               "name": "[format('{0}/table-url', format('{0}{1}apim', parameters('prefix'), parameters('location')))]",
               "properties": {
                 "displayName": "table-url",
-                "value": "[format('{0}{1}', reference(resourceId('Microsoft.Storage/storageAccounts', take(format('stg{0}{1}', parameters('location'), replace(guid(resourceGroup().name, parameters('location'), 'stg'), '-', '')), 22))).primaryEndpoints.table, variables('tableName'))]"
+                "value": "[format('{0}{1}', reference(resourceId('Microsoft.Storage/storageAccounts', format('stg{0}{1}', take(parameters('location'), 8), uniqueString(parameters('prefix'), parameters('location'), 'stg')))).primaryEndpoints.table, variables('tableName'))]"
               },
               "dependsOn": [
                 "[resourceId('Microsoft.ApiManagement/service', format('{0}{1}apim', parameters('prefix'), parameters('location')))]",
-                "[resourceId('Microsoft.Storage/storageAccounts', take(format('stg{0}{1}', parameters('location'), replace(guid(resourceGroup().name, parameters('location'), 'stg'), '-', '')), 22))]"
+                "[resourceId('Microsoft.Storage/storageAccounts', format('stg{0}{1}', take(parameters('location'), 8), uniqueString(parameters('prefix'), parameters('location'), 'stg')))]"
               ]
             },
             {
@@ -934,12 +932,12 @@
               "name": "[format('{0}/table-sas-token', format('{0}{1}apim', parameters('prefix'), parameters('location')))]",
               "properties": {
                 "displayName": "table-sas-token",
-                "value": "[listAccountSas(take(format('stg{0}{1}', parameters('location'), replace(guid(resourceGroup().name, parameters('location'), 'stg'), '-', '')), 22), '2019-06-01', variables('accountSasProperties')).accountSasToken]",
+                "value": "[listAccountSas(format('stg{0}{1}', take(parameters('location'), 8), uniqueString(parameters('prefix'), parameters('location'), 'stg')), '2019-06-01', variables('accountSasProperties')).accountSasToken]",
                 "secret": true
               },
               "dependsOn": [
                 "[resourceId('Microsoft.ApiManagement/service', format('{0}{1}apim', parameters('prefix'), parameters('location')))]",
-                "[resourceId('Microsoft.Storage/storageAccounts', take(format('stg{0}{1}', parameters('location'), replace(guid(resourceGroup().name, parameters('location'), 'stg'), '-', '')), 22))]"
+                "[resourceId('Microsoft.Storage/storageAccounts', format('stg{0}{1}', take(parameters('location'), 8), uniqueString(parameters('prefix'), parameters('location'), 'stg')))]"
               ]
             },
             {
@@ -1017,7 +1015,7 @@
     "_generator": {
       "name": "bicep",
       "version": "0.2.472.54387",
-      "templateHash": "4789863969124124458"
+      "templateHash": "6794298843045116289"
     }
   }
 }
