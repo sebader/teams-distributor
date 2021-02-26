@@ -81,7 +81,7 @@ name: 'BackendAPIMs'
 properties: {
   backends: [for index in range(0, length(regions)): {
     address: apim[index].outputs.apimHostname
-    backendHostHeader: apim[0].outputs.apimHostname
+    backendHostHeader: apim[index].outputs.apimHostname
     httpPort: 80
     httpsPort: 443
     priority: 1
