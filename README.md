@@ -13,12 +13,12 @@ Note: The unique URL can be changed by either using a URL shortener like Bitly o
 
 ## Azure Components
 
-The solution deploys three components:
+The solution deploys the following components:
 
 - Azure Front Door for global load balancing and failover
 - 2x Azure API Management in Consumption tier, in two different regions for resiliency
 - Azure Application Insights including on Azure Portal Dashboard for monitoring
-- Optional: Two Azure Storage Accounts with one Table storage each. Only deployed when using a high number of backend URLs
+- 2x Azure Storage Accounts with one Table storage each. These are only being used (and only will incur costs) when using the table-storage mode for a high number of backend URLs
 
 <p align="center">
     <br>
@@ -41,7 +41,7 @@ While the solution was originally built for Teams Live Events, it can easily be 
 bicep build main.bicep
 ```
 ### Deploy to Azure
-Create resource group (change the location based on your needs)
+Create a resource group (change the location based on your needs)
 ```
 az group create -n myresource-group -l northeurope
 ```
@@ -51,13 +51,13 @@ There are two different deployment types available, based on how many backend UR
 #### Policy-based mode - **this mode should be applicable to most users.**
 Use this when the list of all your backend URLs is not longer than approx. 14,000 characters. In this case the lift of URLs is injected directly into the policy of API Management. 
 
-Use this command to deploy the ARM template - replace the **backends** parameter with your individual Event URLs and  **locationSecondary** based on your preferences.
+Use this command to deploy the ARM template - replace the **backends** parameter with your individual, comma-separated list of Event URLs and **locationSecondary** based on your preferences.
 ```
 az deployment group create -g  myresource-group --template-file .\main.json -p prefix=myprefix -p locationSecondary=westeurope -p backends="https://teams.microsoft.com/l/meetup-join/1,https://teams.microsoft.com/l/meetup-join/2,https://teams.microsoft.com/l/meetup-join/3"
 ```
 
 #### Table-storage mode - for high number of backend URLs
-In this case the URLs are imported after the ARM template deployment into Table storage accounts and APIM fetches them from there. See below for details on this. \
+In this case the URLs must be imported after the ARM template deployment into Table storage accounts and APIM fetches them from there. See below for details on this. \
 Use this command to deploy the ARM template - replace the **locationSecondary** parameter based on your preferences. Note that we are not specifying the URLs here yet and instead setting the parameter `useTableStorage=true`.
 ```
 az deployment group create -g  myresource-group --template-file .\main.json -p prefix=myprefix -p locationSecondary=westeurope -p useTableStorage=true
