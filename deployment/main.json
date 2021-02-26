@@ -79,16 +79,16 @@
             "properties": {
               "backends": [
                 {
-                  "address": "[reference(extensionResourceId(resourceGroup().id, 'Microsoft.Resources/deployments', format('apim-{0}-{1}', variables('location'), parameters('deploymentId'))), '2019-10-01').outputs.apimHostname.value]",
-                  "backendHostHeader": "[reference(extensionResourceId(resourceGroup().id, 'Microsoft.Resources/deployments', format('apim-{0}-{1}', variables('location'), parameters('deploymentId'))), '2019-10-01').outputs.apimHostname.value]",
+                  "address": "[reference(resourceId('Microsoft.Resources/deployments', format('apim-{0}-{1}', variables('location'), parameters('deploymentId'))), '2019-10-01').outputs.apimHostname.value]",
+                  "backendHostHeader": "[reference(resourceId('Microsoft.Resources/deployments', format('apim-{0}-{1}', variables('location'), parameters('deploymentId'))), '2019-10-01').outputs.apimHostname.value]",
                   "httpPort": 80,
                   "httpsPort": 443,
                   "priority": 1,
                   "weight": 50
                 },
                 {
-                  "address": "[reference(extensionResourceId(resourceGroup().id, 'Microsoft.Resources/deployments', format('apim-{0}-{1}', parameters('locationSecondary'), parameters('deploymentId'))), '2019-10-01').outputs.apimHostname.value]",
-                  "backendHostHeader": "[reference(extensionResourceId(resourceGroup().id, 'Microsoft.Resources/deployments', format('apim-{0}-{1}', parameters('locationSecondary'), parameters('deploymentId'))), '2019-10-01').outputs.apimHostname.value]",
+                  "address": "[reference(resourceId('Microsoft.Resources/deployments', format('apim-{0}-{1}', parameters('locationSecondary'), parameters('deploymentId'))), '2019-10-01').outputs.apimHostname.value]",
+                  "backendHostHeader": "[reference(resourceId('Microsoft.Resources/deployments', format('apim-{0}-{1}', parameters('locationSecondary'), parameters('deploymentId'))), '2019-10-01').outputs.apimHostname.value]",
                   "httpPort": 80,
                   "httpsPort": 443,
                   "priority": 1,
@@ -182,8 +182,8 @@
         ]
       },
       "dependsOn": [
-        "[extensionResourceId(resourceGroup().id, 'Microsoft.Resources/deployments', format('apim-{0}-{1}', variables('location'), parameters('deploymentId')))]",
-        "[extensionResourceId(resourceGroup().id, 'Microsoft.Resources/deployments', format('apim-{0}-{1}', parameters('locationSecondary'), parameters('deploymentId')))]"
+        "[resourceId('Microsoft.Resources/deployments', format('apim-{0}-{1}', variables('location'), parameters('deploymentId')))]",
+        "[resourceId('Microsoft.Resources/deployments', format('apim-{0}-{1}', parameters('locationSecondary'), parameters('deploymentId')))]"
       ]
     },
     {
@@ -1011,6 +1011,13 @@
     "frontDoorUrl": {
       "type": "string",
       "value": "[variables('frontdoor_default_dns_name')]"
+    }
+  },
+  "metadata": {
+    "_generator": {
+      "name": "bicep",
+      "version": "0.2.472.54387",
+      "templateHash": "4789863969124124458"
     }
   }
 }
