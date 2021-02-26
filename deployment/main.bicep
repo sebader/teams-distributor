@@ -76,6 +76,19 @@ module apim 'module_apim.bicep' = [for region in regions: {
   }
 }]
 
+/*
+name: 'BackendAPIMs'
+properties: {
+  backends: [for index in range(0, length(regions)): {
+    address: apim[index].outputs.apimHostname
+    backendHostHeader: apim[index].outputs.apimHostname
+    httpPort: 80
+    httpsPort: 443
+    priority: 1
+    weight: 50
+  }]
+*/
+
 resource frontdoor 'Microsoft.Network/frontDoors@2020-05-01' = {
   name: frontDoorName
   location: 'Global'
