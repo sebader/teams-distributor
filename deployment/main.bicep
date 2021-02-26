@@ -58,31 +58,36 @@ resource appinsights 'Microsoft.Insights/components@2018-05-01-preview' = {
   }
 }
 
-module apimPrimaryRegion 'module_apim.bicep' = {
-  name: 'apim-${location}-${deploymentId}'
-  params: {
-    applicationInsightsName: appinsights.name
-    location: location
-    backends: backends
-    prefix: prefix
-    publisherEmail: apimPublisherEmail
-    publisherName: apimPublisherName
-    useTableStorage: useTableStorage
-  }
-}
+var regions = [
+  location
+  locationSecondary
+]
 
-module apimSecondaryRegion 'module_apim.bicep' = {
-  name: 'apim-${locationSecondary}-${deploymentId}'
+module apim 'module_apim.bicep' = [for region in regions: {
+  name: 'apim-${region}-${deploymentId}'
   params: {
     applicationInsightsName: appinsights.name
-    location: locationSecondary
+    location: region
     backends: backends
     prefix: prefix
     publisherEmail: apimPublisherEmail
     publisherName: apimPublisherName
     useTableStorage: useTableStorage
   }
-}
+}]
+
+/*
+name: 'BackendAPIMs'
+properties: {
+  backends: [for index in range(0, length(regions)): {
+    address: apim[index].outputs.apimHostname
+    backendHostHeader: apim[0].outputs.apimHostname
+    httpPort: 80
+    httpsPort: 443
+    priority: 1
+    weight: 50
+  }]
+*/
 
 resource frontdoor 'Microsoft.Network/frontDoors@2020-05-01' = {
   name: frontDoorName
@@ -94,16 +99,16 @@ resource frontdoor 'Microsoft.Network/frontDoors@2020-05-01' = {
         properties: {
           backends: [
             {
-              address: apimPrimaryRegion.outputs.apimHostname
-              backendHostHeader: apimPrimaryRegion.outputs.apimHostname
+              address: apim[0].outputs.apimHostname
+              backendHostHeader: apim[0].outputs.apimHostname
               httpPort: 80
               httpsPort: 443
               priority: 1
               weight: 50
             }
             {
-              address: apimSecondaryRegion.outputs.apimHostname
-              backendHostHeader: apimSecondaryRegion.outputs.apimHostname
+              address: apim[1].outputs.apimHostname
+              backendHostHeader: apim[1].outputs.apimHostname
               httpPort: 80
               httpsPort: 443
               priority: 1
