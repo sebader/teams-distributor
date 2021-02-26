@@ -35,11 +35,9 @@ While the solution was originally built for Teams Live Events, it can easily be 
 
 ## How to use
 
-### Build Bicep (optional)
-[Build](https://github.com/Azure/bicep) bicep - if you didn't make any changes, you can also just use the main.json ARM template file from the repo which was already generated
-```
-bicep build main.bicep
-```
+### Optional: Make changes and build Bicep
+This solution uses [bicep](https://github.com/Azure/bicep) templates which are then compiled into ARM templates. If you wish to make any changes, do so in the bicep templates and compile it. It is not recommended to modify the ARM template (main.json). If you didn't make any changes, you can just use the main.json ARM template file from the repo which was already generated.
+
 ### Deploy to Azure
 Create a resource group (change the location based on your needs)
 ```
