@@ -186,9 +186,9 @@
         ]
       },
       "dependsOn": [
-        "[resourceId('Microsoft.Resources/deployments', format('apim-{0}-{1}', variables('regions')[0], parameters('deploymentId')))]",
-        "[resourceId('Microsoft.Resources/deployments', format('apim-{0}-{1}', variables('regions')[0], parameters('deploymentId')))]",
         "[resourceId('Microsoft.Resources/deployments', format('apim-{0}-{1}', variables('regions')[1], parameters('deploymentId')))]",
+        "[resourceId('Microsoft.Resources/deployments', format('apim-{0}-{1}', variables('regions')[0], parameters('deploymentId')))]",
+        "[resourceId('Microsoft.Resources/deployments', format('apim-{0}-{1}', variables('regions')[0], parameters('deploymentId')))]",
         "[resourceId('Microsoft.Resources/deployments', format('apim-{0}-{1}', variables('regions')[1], parameters('deploymentId')))]"
       ]
     },
@@ -699,7 +699,7 @@
     "_generator": {
       "name": "bicep",
       "version": "0.2.472.54387",
-      "templateHash": "7983949240294754330"
+      "templateHash": "7952444008103458566"
     }
   }
 }

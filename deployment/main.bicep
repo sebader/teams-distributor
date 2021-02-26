@@ -77,6 +77,8 @@ module apim 'module_apim.bicep' = [for region in regions: {
 }]
 
 /*
+** This loop syntaxt is not yet working
+
 name: 'BackendAPIMs'
 properties: {
   backends: [for index in range(0, length(regions)): {
