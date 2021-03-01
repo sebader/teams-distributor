@@ -76,21 +76,6 @@ module apim 'module_apim.bicep' = [for region in regions: {
   }
 }]
 
-/*
-** This loop syntaxt is not yet working
-
-name: 'BackendAPIMs'
-properties: {
-  backends: [for index in range(0, length(regions)): {
-    address: apim[index].outputs.apimHostname
-    backendHostHeader: apim[index].outputs.apimHostname
-    httpPort: 80
-    httpsPort: 443
-    priority: 1
-    weight: 50
-  }]
-*/
-
 resource frontdoor 'Microsoft.Network/frontDoors@2020-05-01' = {
   name: frontDoorName
   location: 'Global'
@@ -99,24 +84,14 @@ resource frontdoor 'Microsoft.Network/frontDoors@2020-05-01' = {
       {
         name: 'BackendAPIMs'
         properties: {
-          backends: [
-            {
-              address: apim[0].outputs.apimHostname
-              backendHostHeader: apim[0].outputs.apimHostname
-              httpPort: 80
-              httpsPort: 443
-              priority: 1
-              weight: 50
-            }
-            {
-              address: apim[1].outputs.apimHostname
-              backendHostHeader: apim[1].outputs.apimHostname
-              httpPort: 80
-              httpsPort: 443
-              priority: 1
-              weight: 50
-            }
-          ]
+          backends: [for index in range(0, length(regions)): {
+            address: apim[index].outputs.apimHostname
+            backendHostHeader: apim[index].outputs.apimHostname
+            httpPort: 80
+            httpsPort: 443
+            priority: 1
+            weight: 50
+          }]
           healthProbeSettings: {
             id: '${resourceId('Microsoft.Network/frontDoors', frontDoorName)}/healthProbeSettings/HealthProbeSetting'
           }

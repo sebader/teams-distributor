@@ -81,22 +81,18 @@
           {
             "name": "BackendAPIMs",
             "properties": {
-              "backends": [
+              "copy": [
                 {
-                  "address": "[reference(resourceId('Microsoft.Resources/deployments', format('apim-{0}-{1}', variables('regions')[0], parameters('deploymentId'))), '2019-10-01').outputs.apimHostname.value]",
-                  "backendHostHeader": "[reference(resourceId('Microsoft.Resources/deployments', format('apim-{0}-{1}', variables('regions')[0], parameters('deploymentId'))), '2019-10-01').outputs.apimHostname.value]",
-                  "httpPort": 80,
-                  "httpsPort": 443,
-                  "priority": 1,
-                  "weight": 50
-                },
-                {
-                  "address": "[reference(resourceId('Microsoft.Resources/deployments', format('apim-{0}-{1}', variables('regions')[1], parameters('deploymentId'))), '2019-10-01').outputs.apimHostname.value]",
-                  "backendHostHeader": "[reference(resourceId('Microsoft.Resources/deployments', format('apim-{0}-{1}', variables('regions')[1], parameters('deploymentId'))), '2019-10-01').outputs.apimHostname.value]",
-                  "httpPort": 80,
-                  "httpsPort": 443,
-                  "priority": 1,
-                  "weight": 50
+                  "name": "backends",
+                  "count": "[length(range(0, length(variables('regions'))))]",
+                  "input": {
+                    "address": "[reference(resourceId('Microsoft.Resources/deployments', format('apim-{0}-{1}', variables('regions')[range(0, length(variables('regions')))[copyIndex('backends')]], parameters('deploymentId'))), '2019-10-01').outputs.apimHostname.value]",
+                    "backendHostHeader": "[reference(resourceId('Microsoft.Resources/deployments', format('apim-{0}-{1}', variables('regions')[range(0, length(variables('regions')))[copyIndex('backends')]], parameters('deploymentId'))), '2019-10-01').outputs.apimHostname.value]",
+                    "httpPort": 80,
+                    "httpsPort": 443,
+                    "priority": 1,
+                    "weight": 50
+                  }
                 }
               ],
               "healthProbeSettings": {
@@ -186,10 +182,7 @@
         ]
       },
       "dependsOn": [
-        "[resourceId('Microsoft.Resources/deployments', format('apim-{0}-{1}', variables('regions')[1], parameters('deploymentId')))]",
-        "[resourceId('Microsoft.Resources/deployments', format('apim-{0}-{1}', variables('regions')[0], parameters('deploymentId')))]",
-        "[resourceId('Microsoft.Resources/deployments', format('apim-{0}-{1}', variables('regions')[0], parameters('deploymentId')))]",
-        "[resourceId('Microsoft.Resources/deployments', format('apim-{0}-{1}', variables('regions')[1], parameters('deploymentId')))]"
+        "apim"
       ]
     },
     {
@@ -698,8 +691,8 @@
   "metadata": {
     "_generator": {
       "name": "bicep",
-      "version": "0.2.472.54387",
-      "templateHash": "7952444008103458566"
+      "version": "0.2.480.26409",
+      "templateHash": "17289398168637083132"
     }
   }
 }
