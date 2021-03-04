@@ -1,48 +1,23 @@
-param prefix string {
-  metadata: {
-    description: 'Prefix for all resources to create uniqueness'
-  }
-}
-param locationSecondary string {
-  metadata: {
-    description: 'Region of the second API Management instance. Needs to be different than the location of the resource group which is being used as the primary location. Must support APIM Consumption tier.'
-  }
-}
+@description('Prefix for all resources to create uniqueness')
+param prefix string
 
-param useTableStorage bool {
-  default: false
-  metadata: {
-    description: 'Set to True if you are using many (> 10) backend URLS. In this case a Table Storage will be created which you need to fill afterwards.'
-  }
-}
+@description('Region of the second API Management instance. Needs to be different than the location of the resource group which is being used as the primary location. Must support APIM Consumption tier.')
+param locationSecondary string
 
-param backends string {
-  default: ''
-  metadata: {
-    description: 'Leave blank if you set the parameter useTableStorage to True. Comma-separated list of backend URLs to which incoming requests will be forwarded to in a random fashion. For example like: https://teams.microsoft.com/l/meetup-join/1,https://teams.microsoft.com/l/meetup-join/2'
-  }
-}
+@description('Set to True if you are using many (> 10) backend URLS. In this case a Table Storage will be created which you need to fill afterwards.')
+param useTableStorage bool = false
 
-param apimPublisherName string {
-  default: 'Contoso Admin'
-  metadata: {
-    description: 'API Management Publisher Name'
-  }
-}
+@description('Leave blank if you set the parameter useTableStorage to True. Comma-separated list of backend URLs to which incoming requests will be forwarded to in a random fashion. For example like: https://teams.microsoft.com/l/meetup-join/1,https://teams.microsoft.com/l/meetup-join/2')
+param backends string = ''
 
-param apimPublisherEmail string {
-  default: 'noreply@contoso.com'
-  metadata: {
-    description: 'API Management Publisher Email Address'
-  }
-}
+@description('API Management Publisher Name')
+param apimPublisherName string = 'Contoso Admin'
 
-param deploymentId string {
-  default: utcNow()
-  metadata: {
-    description: 'No need to change. ID to be added to the deployment names, such as the run ID of a pipeline. Default to UTC-now timestamp'
-  }
-}
+@description('API Management Publisher Email Address')
+param apimPublisherEmail string = 'noreply@contoso.com'
+
+@description('No need to change. ID to be added to the deployment names, such as the run ID of a pipeline. Default to UTC-now timestamp')
+param deploymentId string = utcNow()
 
 var location = resourceGroup().location
 
