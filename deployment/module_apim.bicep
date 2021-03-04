@@ -106,7 +106,7 @@ resource getbackendPolicy 'Microsoft.ApiManagement/service/apis/operations/polic
   name: '${operationGetbackend.name}/policy'
   properties: {
     format: 'xml'
-    // The 'backends' parameter gets injected into the policy here (scroll further to the right)
+    // The 'backends' parameter gets injected into the policy here (scroll further to the right). Because of that we cannot currently use multi-line strings in bicep as they do not yet support interpolation
     value: '<policies>\r\n  <inbound>\r\n    <base />\r\n    <return-response>\r\n      <set-status code="302" />\r\n      <set-header name="X-Apim-Region" exists-action="override">\r\n        <value>@(context.Deployment.Region)</value>\r\n      </set-header>\r\n      <set-header name="Location" exists-action="override">\r\n        <value>@{\r\n                    var backends = "${backends}".Split(\',\');\r\n                    var i = new Random(context.RequestId.GetHashCode()).Next(0, backends.Length);\r\n                    return backends[i];\r\n                }</value>\r\n      </set-header>\r\n    </return-response>\r\n  </inbound>\r\n  <backend>\r\n    <base />\r\n  </backend>\r\n  <outbound>\r\n    <base />\r\n  </outbound>\r\n  <on-error>\r\n    <base />\r\n  </on-error>\r\n</policies>'
   }
 }
@@ -119,7 +119,52 @@ resource getbackendFromTablePolicy 'Microsoft.ApiManagement/service/apis/operati
   ]
   properties: {
     format: 'xml'
-    value: '<policies>\r\n  <inbound>\r\n    <base />\r\n    <!-- Make outbound request to the table API which holds the list of backend URLs -->\r\n    <send-request mode="new" response-variable-name="tableApiResponse" timeout="20" ignore-error="true">\r\n      <set-url>@("{{table-url}}?{{table-sas-token}}&amp;$select=url")</set-url>\r\n      <set-method>GET</set-method>\r\n      <set-header name="Accept" exists-action="override">\r\n        <value>application/json;odata=nometadata</value>\r\n      </set-header>\r\n    </send-request>\r\n    <set-method>GET</set-method>\r\n    <return-response>\r\n      <set-status code="302" />\r\n      <set-header name="X-Apim-Region" exists-action="override">\r\n        <value>@(context.Deployment.Region)</value>\r\n      </set-header>\r\n      <set-header name="Location" exists-action="override">\r\n        <value>@{\r\n                    try\r\n                    {\r\n                        var urls = ((IResponse) context.Variables["tableApiResponse"]).Body.As&lt;JObject&gt;()["value"];\r\n                        // Generate random rowKey\r\n                        var rowKey = new Random(context.RequestId.GetHashCode()).Next(0, urls.Count());\r\n                        return (string)urls[rowKey]["url"];\r\n                    }\r\n                    catch (Exception e)\r\n                    {\r\n                        // If something failed, it is usually because of an transient error. Then we just send the user to the same URL again to retry.\r\n                        return "/";\r\n                    }\r\n                }</value>\r\n      </set-header>\r\n    </return-response>\r\n  </inbound>\r\n  <backend>\r\n    <base />\r\n  </backend>\r\n  <outbound>\r\n    <base />\r\n  </outbound>\r\n  <on-error>\r\n    <base />\r\n  </on-error>\r\n</policies>'
+    value: '''
+<policies>
+    <inbound>
+        <base />
+        <!-- Make outbound request to the table API which holds the list of backend URLs -->
+        <send-request mode="new" response-variable-name="tableApiResponse" timeout="20" ignore-error="true">
+            <set-url>@("{{table-url}}?{{table-sas-token}}&$select=url")</set-url>
+            <set-method>GET</set-method>
+            <set-header name="Accept" exists-action="override">
+                <value>application/json;odata=nometadata</value>
+            </set-header>
+        </send-request>
+        <set-method>GET</set-method>
+        <return-response>
+            <set-status code="302" />
+            <set-header name="X-Apim-Region" exists-action="override">
+                <value>@(context.Deployment.Region)</value>
+            </set-header>
+            <set-header name="Location" exists-action="override">
+                <value>@{
+                    try
+                    {
+                        var urls = ((IResponse) context.Variables["tableApiResponse"]).Body.As<JObject>()["value"];
+                        // Generate random rowKey
+                        var rowKey = new Random(context.RequestId.GetHashCode()).Next(0, urls.Count());
+                        return (string)urls[rowKey]["url"];
+                    }
+                    catch (Exception e)
+                    {
+                        // If something failed, it is usually because of an transient error. Then we just send the user to the same URL again to retry.
+                        return "/";
+                    }
+                }</value>
+            </set-header>
+        </return-response>
+    </inbound>
+    <backend>
+        <base />
+    </backend>
+    <outbound>
+        <base />
+    </outbound>
+    <on-error>
+        <base />
+    </on-error>
+</policies>'''
   }
 }
 
@@ -127,7 +172,24 @@ resource healthzPolicy 'Microsoft.ApiManagement/service/apis/operations/policies
   name: '${operationHealthz.name}/policy'
   properties: {
     format: 'xml'
-    value: '<policies>\r\n  <inbound>\r\n    <base />\r\n    <return-response>\r\n      <set-status code="200" />\r\n    </return-response>\r\n  </inbound>\r\n  <backend>\r\n    <base />\r\n  </backend>\r\n  <outbound>\r\n    <base />\r\n  </outbound>\r\n  <on-error>\r\n    <base />\r\n  </on-error>\r\n</policies>'
+    value: '''
+<policies>
+    <inbound>
+        <base />
+        <return-response>
+            <set-status code="200" />
+        </return-response>
+    </inbound>
+    <backend>
+        <base />
+    </backend>
+    <outbound>
+        <base />
+    </outbound>
+    <on-error>
+        <base />
+    </on-error>
+</policies>'''
   }
 }
 
