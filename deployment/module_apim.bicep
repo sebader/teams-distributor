@@ -181,7 +181,6 @@ resource getbackendPolicyByLanguage 'Microsoft.ApiManagement/service/apis/operat
             </set-header>
             <set-header name="Location" exists-action="override">
                 <value>@{
-                    // sample URL format: de=https://teams.microsoft.com/l/meetup-join/19%3ameeting_GERMAN1;fr=https://teams.microsoft.com/l/meetup-join/19%3ameeting_FRENCH1;en=https://teams.microsoft.com/l/meetup-join/19%3ameeting_ENGLISH1,https://teams.microsoft.com/l/meetup-join/19%3ameeting_ENGLISH2  
                     var dict = "{{backend-urls}}".Split(';').Select(item => item.Split('=')).ToDictionary(s => s[0], s => s[1].Split(','));
 
                     string[] languageUrls;
