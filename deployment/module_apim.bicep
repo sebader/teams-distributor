@@ -3,13 +3,23 @@ param location string
 param publisherEmail string
 param publisherName string
 
-param backends string
-param useTableStorage bool
+param backends string = ''
+
+@allowed([
+  'default'
+  'userLanguage'
+  'largeEvent'
+])
+param loadBalancingMode string = 'default'
 
 param applicationInsightsName string
 
 param sasTokenStart string = utcNow('yyyy-MM-ddTHH:mm:ssZ')
 param sasTokenExpiry string = dateTimeAdd(utcNow('u'), 'P2Y', 'yyyy-MM-ddTHH:mm:ssZ') // Expries in 2 years from deployment time
+
+var useDefaultLb = loadBalancingMode == 'default'
+var useTableStorage = loadBalancingMode == 'largeEvent'
+var useLanguageRouter = loadBalancingMode == 'userLanguage'
 
 // Because of some issue in bicep/ARM using "if (useTableStorage)" on this resource breaks other dependencies. Thus, we always provision the storage account, even if it is not being used when not running in Table-storage mode.
 resource storageAccount 'Microsoft.Storage/storageAccounts@2019-06-01' = {
@@ -75,7 +85,7 @@ resource apiHealthz 'Microsoft.ApiManagement/service/apis@2020-06-01-preview' = 
 }
 
 // Based on the parameter useTableStorage either this operation is being created...
-resource operationGetbackend 'Microsoft.ApiManagement/service/apis/operations@2020-06-01-preview' = if (!useTableStorage) {
+resource operationGetbackend 'Microsoft.ApiManagement/service/apis/operations@2020-06-01-preview' = if (useDefaultLb) {
   name: '${apiGetbackend.name}/getbackendfrompolicy'
   properties: {
     displayName: 'Get Backend From Policy'
@@ -83,11 +93,22 @@ resource operationGetbackend 'Microsoft.ApiManagement/service/apis/operations@20
     urlTemplate: '/'
   }
 }
+
 // ... or this operation is being used. This one will retrieve the backend URLs from the Table storage.
 resource operationGetbackendFromTable 'Microsoft.ApiManagement/service/apis/operations@2020-06-01-preview' = if (useTableStorage) {
   name: '${apiGetbackend.name}/getbackendfromtable'
   properties: {
     displayName: 'Get Backend From Table Storage'
+    method: 'GET'
+    urlTemplate: '/'
+  }
+}
+
+// ... or this operation is being used. This one will retrieve the backend URLs from the Table storage.
+resource operationGetbackendByLanguage 'Microsoft.ApiManagement/service/apis/operations@2020-06-01-preview' = if (useLanguageRouter) {
+  name: '${apiGetbackend.name}/getbackendbylanguage'
+  properties: {
+    displayName: 'Get Backend by User Language'
     method: 'GET'
     urlTemplate: '/'
   }
@@ -102,13 +123,15 @@ resource operationHealthz 'Microsoft.ApiManagement/service/apis/operations@2020-
   }
 }
 
-resource getbackendPolicy 'Microsoft.ApiManagement/service/apis/operations/policies@2020-06-01-preview' = if (!useTableStorage) {
+resource getbackendPolicy 'Microsoft.ApiManagement/service/apis/operations/policies@2020-06-01-preview' = if (useDefaultLb) {
   name: '${operationGetbackend.name}/policy'
+  dependsOn: [
+    namedValueBackends
+  ]
   properties: {
     format: 'xml'
-    // The 'backends' parameter gets injected into the policy via the format() function, because we cannot yet use interpolation in multi-line strings in bicep
-    // Be aware of the double {{ }} we have to use with the policy expression to escape the format references
-    value: format('''
+    // The 'backends' parameter gets injected into the policy via the named value
+    value: '''
 <policies>
     <inbound>
         <base />
@@ -118,11 +141,11 @@ resource getbackendPolicy 'Microsoft.ApiManagement/service/apis/operations/polic
                 <value>@(context.Deployment.Region)</value>
             </set-header>
             <set-header name="Location" exists-action="override">
-                <value>@{{
-                    var backends = "{0}".Split(',');
+                <value>@{
+                    var backends = "{{backend-urls}}".Split(',');
                     var i = new Random(context.RequestId.GetHashCode()).Next(0, backends.Length);
                     return backends[i];
-                }}</value>
+                }</value>
             </set-header>
         </return-response>
     </inbound>
@@ -135,7 +158,67 @@ resource getbackendPolicy 'Microsoft.ApiManagement/service/apis/operations/polic
     <on-error>
         <base />
     </on-error>
-</policies>''', backends)
+</policies>'''
+  }
+}
+
+resource getbackendPolicyByLanguage 'Microsoft.ApiManagement/service/apis/operations/policies@2020-06-01-preview' = if (useLanguageRouter) {
+  name: '${operationGetbackendByLanguage.name}/policy'
+  dependsOn: [
+    namedValueBackends
+  ]
+  properties: {
+    format: 'xml'
+    // The 'backends' parameter gets injected into the policy via the named value
+    value: '''
+<policies>
+    <inbound>
+        <base />
+        <return-response>
+            <set-status code="302" />
+            <set-header name="X-Apim-Region" exists-action="override">
+                <value>@(context.Deployment.Region)</value>
+            </set-header>
+            <set-header name="Location" exists-action="override">
+                <value>@{
+                    // sample URL format: de=https://teams.microsoft.com/l/meetup-join/19%3ameeting_GERMAN1;fr=https://teams.microsoft.com/l/meetup-join/19%3ameeting_FRENCH1;en=https://teams.microsoft.com/l/meetup-join/19%3ameeting_ENGLISH1,https://teams.microsoft.com/l/meetup-join/19%3ameeting_ENGLISH2  
+                    var dict = "{{backend-urls}}".Split(';').Select(item => item.Split('=')).ToDictionary(s => s[0], s => s[1].Split(','));
+
+                    string[] languageUrls;
+                    // If the query parameter "lang" is present and the requested language exists in the list, we use that. Otherwise we use the header Accept-Language
+                    var langQueryParam = context.Request.OriginalUrl.Query.GetValueOrDefault("lang", "");
+                    if(!dict.TryGetValue(langQueryParam, out languageUrls))
+                    {              
+                        var userLanguage = context.Request.Headers.GetValueOrDefault("Accept-Language", "en");
+                        // Sample values for Accept-Language: "Accept-Language: de"  "Accept-Language: de-CH"  "Accept-Language: en-US,en;q=0.5"
+                        if(userLanguage.Contains(","))
+                        {
+                            userLanguage = userLanguage.Split(',')[0];
+                        }
+                        if(userLanguage.Contains("-"))
+                        {
+                            userLanguage = userLanguage.Split('-')[0];
+                        }
+                        // If the language from the header exists in the list, we use that, otherwise we default to English
+                        languageUrls = dict.ContainsKey(userLanguage) ? dict[userLanguage] : dict["en"];
+                    }
+                    // If the list only contains more than one entry for the selected language, we pick at random
+                    var selectedUrl = languageUrls.Length == 0 ? languageUrls[0] : languageUrls[new Random(context.RequestId.GetHashCode()).Next(0, languageUrls.Length)];
+                    return selectedUrl;
+                }</value>
+            </set-header>
+        </return-response>
+    </inbound>
+    <backend>
+        <base />
+    </backend>
+    <outbound>
+        <base />
+    </outbound>
+    <on-error>
+        <base />
+    </on-error>
+</policies>'''
   }
 }
 
@@ -218,6 +301,15 @@ resource healthzPolicy 'Microsoft.ApiManagement/service/apis/operations/policies
         <base />
     </on-error>
 </policies>'''
+  }
+}
+
+// Section: named values for backend urls
+resource namedValueBackends 'Microsoft.ApiManagement/service/namedValues@2020-06-01-preview' = if (useDefaultLb || useLanguageRouter) {
+  name: '${apim.name}/backend-urls'
+  properties: {
+    displayName: 'backend-urls'
+    value: backends
   }
 }
 
