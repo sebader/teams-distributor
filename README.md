@@ -69,6 +69,17 @@ To use this more, your list of backends must be formatted different. See the fol
 **Note**: This mode currently only supports a list of URLs that is not longer than approx. 14,000 characters.
 
 Use this command to deploy the ARM template - replace the **backends** parameter with your individual, semicolon-separated list of Event URLs, starting with the language code. Within each language code you can have multiple URLs. In this case, those will be load-balanced as well. There always needs to be at least one URL for English (`en`) as this is used as the fallback option. Also, update **locationSecondary** based on your preferences.
+
+Let's take the following example:
+- For **English (en)**, you need to redirect users to URL's **https://URL_EN_1** and **https://URL_EN_2**
+- For **French (fr)**, you need to redirect users to URL's **https://URL_FR_1**, **https://URL_FR_2** and **https://URL_FR_3**
+- For **German (de)**, you need to redirect userd to URL's **https://URL_GE_1**
+
+Here is how you will create the "backends" string for such a configuration:
+backends="en=https://URL_EN_1;https://URL_EN_2,fr=https://URL_FR_1;https://URL_FR_2;https://URL_FR_3,de=https://URL_GE_1"
+
+Note: all other languages, not specified inthe backends definition, will fall into "en" as a default.
+
 ```
 az deployment group create -g  myresource-group --template-file .\main.json -p prefix=myprefix -p locationSecondary=westeurope -p loadBalancingMode=userLanguage -p backends="de=https://teams.microsoft.com/l/meetup-join/19%3ameeting_GERMAN1;fr=https://teams.microsoft.com/l/meetup-join/19%3ameeting_FRENCH1;en=https://teams.microsoft.com/l/meetup-join/19%3ameeting_ENGLISH1,https://teams.microsoft.com/l/meetup-join/19%3ameeting_ENGLISH2"
 ```
