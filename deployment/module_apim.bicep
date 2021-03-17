@@ -185,9 +185,9 @@ resource getbackendPolicyByLanguage 'Microsoft.ApiManagement/service/apis/operat
 
                     string[] languageUrls;
                     // If the query parameter "lang" is present and the requested language exists in the list, we use that. Otherwise we use the header Accept-Language
-                    var langQueryParam = context.Request.OriginalUrl.Query.GetValueOrDefault("lang", "");
+                    var langQueryParam = context.Request.OriginalUrl.Query.GetValueOrDefault("lang", "").ToLower();
                     if(!dict.TryGetValue(langQueryParam, out languageUrls))
-                    {              
+                    {
                         var userLanguage = context.Request.Headers.GetValueOrDefault("Accept-Language", "en");
                         // Sample values for Accept-Language: "Accept-Language: de"  "Accept-Language: de-CH"  "Accept-Language: en-US,en;q=0.5"
                         if(userLanguage.Contains(","))
