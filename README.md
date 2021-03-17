@@ -38,7 +38,7 @@ While the solution was originally built for Teams Live Events, it can easily be 
 ### Optional: Make changes and build Bicep
 This solution uses [bicep](https://github.com/Azure/bicep) templates which are then compiled into ARM templates. If you wish to make any changes, do so in the bicep templates and compile it. It is not recommended to modify the ARM template (main.json). If you didn't make any changes, you can just use the main.json ARM template file from the repo which was already generated.
 
-### Deploy to Azure
+### Deploy to Azure via CLI
 Create a resource group (change the location based on your needs)
 ```
 az group create -n myresource-group -l northeurope
@@ -72,6 +72,9 @@ Use this command to deploy the ARM template - replace the **backends** parameter
 ```
 az deployment group create -g  myresource-group --template-file .\main.json -p prefix=myprefix -p locationSecondary=westeurope -p loadBalancingMode=userLanguage -p backends="de=https://teams.microsoft.com/l/meetup-join/19%3ameeting_GERMAN1;fr=https://teams.microsoft.com/l/meetup-join/19%3ameeting_FRENCH1;en=https://teams.microsoft.com/l/meetup-join/19%3ameeting_ENGLISH1,https://teams.microsoft.com/l/meetup-join/19%3ameeting_ENGLISH2"
 ```
+
+In this mode, the browser request header `Accept-Language` is being used to determine which URL to use. Alternatively the query parameter `?lang=` can be set, which will then take precedence. For example: [https://{MYPREFIX}globalfrontdoor.azurefd.net?lang=fr]() to force French as the language.
+
 
 #### Deploy through the Azure Portal
 As an alternative to using command line, you can also deploy through the Azure Portal directly and set the parameters accordingly.
