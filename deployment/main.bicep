@@ -4,10 +4,15 @@ param prefix string
 @description('Region of the second API Management instance. Needs to be different than the location of the resource group which is being used as the primary location. Must support APIM Consumption tier.')
 param locationSecondary string
 
-@description('Set to True if you are using many (> 10) backend URLS. In this case a Table Storage will be created which you need to fill afterwards.')
-param useTableStorage bool = false
+@allowed([
+  'default'
+  'userLanguage'
+  'largeEvent'
+])
+@description('Which Load Balancing (LB) mode to use. Default: Random LB with a list of URL that does not exceed 15,000 characters. userLanguage: LB based on user browser language. largeEvent: Random LB with a list of URL that exceedss 15,000 characters (many, long URLs).')
+param loadBalancingMode string = 'default'
 
-@description('Leave blank if you set the parameter useTableStorage to True. Comma-separated list of backend URLs to which incoming requests will be forwarded to in a random fashion. For example like: https://teams.microsoft.com/l/meetup-join/1,https://teams.microsoft.com/l/meetup-join/2')
+@description('Leave blank if you set the parameter loadBalancingMode to largeEvent. Otherwise: If mode=default: Comma-separated list of backend URLs to which incoming requests will be forwarded to in a random fashion. For example like: https://teams.microsoft.com/l/meetup-join/1,https://teams.microsoft.com/l/meetup-join/2 If mode=userLanguage: List of backend URLs, split by language to which incoming requests will be forwarded based on their browser language and, if there are multiple links per language in a random fashion. Uses English as the fallback. For example like: de=https://teams.microsoft.com/l/meetup-join/19%3ameeting_GERMAN1;fr=https://teams.microsoft.com/l/meetup-join/19%3ameeting_FRENCH1;en=https://teams.microsoft.com/l/meetup-join/19%3ameeting_ENGLISH1,https://teams.microsoft.com/l/meetup-join/19%3ameeting_ENGLISH2')
 param backends string = ''
 
 @description('API Management Publisher Name')
@@ -47,7 +52,7 @@ module apim 'module_apim.bicep' = [for region in regions: {
     prefix: prefix
     publisherEmail: apimPublisherEmail
     publisherName: apimPublisherName
-    useTableStorage: useTableStorage
+    loadBalancingMode: loadBalancingMode
   }
 }]
 

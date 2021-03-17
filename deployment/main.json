@@ -14,18 +14,23 @@
         "description": "Region of the second API Management instance. Needs to be different than the location of the resource group which is being used as the primary location. Must support APIM Consumption tier."
       }
     },
-    "useTableStorage": {
-      "type": "bool",
-      "defaultValue": false,
+    "loadBalancingMode": {
+      "type": "string",
+      "defaultValue": "default",
       "metadata": {
-        "description": "Set to True if you are using many (> 10) backend URLS. In this case a Table Storage will be created which you need to fill afterwards."
-      }
+        "description": "Which Load Balancing (LB) mode to use. Default: Random LB with a list of URL that does not exceed 15,000 characters. userLanguage: LB based on user browser language. largeEvent: Random LB with a list of URL that exceedss 15,000 characters (many, long URLs)."
+      },
+      "allowedValues": [
+        "default",
+        "userLanguage",
+        "largeEvent"
+      ]
     },
     "backends": {
       "type": "string",
       "defaultValue": "",
       "metadata": {
-        "description": "Leave blank if you set the parameter useTableStorage to True. Comma-separated list of backend URLs to which incoming requests will be forwarded to in a random fashion. For example like: https://teams.microsoft.com/l/meetup-join/1,https://teams.microsoft.com/l/meetup-join/2"
+        "description": "Leave blank if you set the parameter loadBalancingMode to largeEvent. Otherwise: If mode=default: Comma-separated list of backend URLs to which incoming requests will be forwarded to in a random fashion. For example like: https://teams.microsoft.com/l/meetup-join/1,https://teams.microsoft.com/l/meetup-join/2 If mode=userLanguage: List of backend URLs, split by language to which incoming requests will be forwarded based on their browser language and, if there are multiple links per language in a random fashion. Uses English as the fallback. For example like: de=https://teams.microsoft.com/l/meetup-join/19%3ameeting_GERMAN1;fr=https://teams.microsoft.com/l/meetup-join/19%3ameeting_FRENCH1;en=https://teams.microsoft.com/l/meetup-join/19%3ameeting_ENGLISH1,https://teams.microsoft.com/l/meetup-join/19%3ameeting_ENGLISH2"
       }
     },
     "apimPublisherName": {
@@ -383,8 +388,8 @@
           "publisherName": {
             "value": "[parameters('apimPublisherName')]"
           },
-          "useTableStorage": {
-            "value": "[parameters('useTableStorage')]"
+          "loadBalancingMode": {
+            "value": "[parameters('loadBalancingMode')]"
           }
         },
         "template": {
@@ -404,10 +409,17 @@
               "type": "string"
             },
             "backends": {
-              "type": "string"
+              "type": "string",
+              "defaultValue": ""
             },
-            "useTableStorage": {
-              "type": "bool"
+            "loadBalancingMode": {
+              "type": "string",
+              "defaultValue": "default",
+              "allowedValues": [
+                "default",
+                "userLanguage",
+                "largeEvent"
+              ]
             },
             "applicationInsightsName": {
               "type": "string"
@@ -423,6 +435,9 @@
           },
           "functions": [],
           "variables": {
+            "useDefaultLb": "[equals(parameters('loadBalancingMode'), 'default')]",
+            "useTableStorage": "[equals(parameters('loadBalancingMode'), 'largeEvent')]",
+            "useLanguageRouter": "[equals(parameters('loadBalancingMode'), 'userLanguage')]",
             "tableName": "Urls",
             "accountSasProperties": {
               "signedServices": "t",
@@ -448,7 +463,7 @@
               }
             },
             {
-              "condition": "[parameters('useTableStorage')]",
+              "condition": "[variables('useTableStorage')]",
               "type": "Microsoft.Storage/storageAccounts/tableServices/tables",
               "apiVersion": "2019-06-01",
               "name": "[format('{0}/default/{1}', format('stg{0}{1}', take(parameters('location'), 8), uniqueString(parameters('prefix'), parameters('location'), 'stg')), variables('tableName'))]",
@@ -508,7 +523,7 @@
               ]
             },
             {
-              "condition": "[not(parameters('useTableStorage'))]",
+              "condition": "[variables('useDefaultLb')]",
               "type": "Microsoft.ApiManagement/service/apis/operations",
               "apiVersion": "2020-06-01-preview",
               "name": "[format('{0}/getbackendfrompolicy', format('{0}/getbackend', format('{0}{1}apim', parameters('prefix'), parameters('location'))))]",
@@ -522,12 +537,26 @@
               ]
             },
             {
-              "condition": "[parameters('useTableStorage')]",
+              "condition": "[variables('useTableStorage')]",
               "type": "Microsoft.ApiManagement/service/apis/operations",
               "apiVersion": "2020-06-01-preview",
               "name": "[format('{0}/getbackendfromtable', format('{0}/getbackend', format('{0}{1}apim', parameters('prefix'), parameters('location'))))]",
               "properties": {
                 "displayName": "Get Backend From Table Storage",
+                "method": "GET",
+                "urlTemplate": "/"
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.ApiManagement/service/apis', split(format('{0}/getbackend', format('{0}{1}apim', parameters('prefix'), parameters('location'))), '/')[0], split(format('{0}/getbackend', format('{0}{1}apim', parameters('prefix'), parameters('location'))), '/')[1])]"
+              ]
+            },
+            {
+              "condition": "[variables('useLanguageRouter')]",
+              "type": "Microsoft.ApiManagement/service/apis/operations",
+              "apiVersion": "2020-06-01-preview",
+              "name": "[format('{0}/getbackendbylanguage', format('{0}/getbackend', format('{0}{1}apim', parameters('prefix'), parameters('location'))))]",
+              "properties": {
+                "displayName": "Get Backend by User Language",
                 "method": "GET",
                 "urlTemplate": "/"
               },
@@ -549,20 +578,35 @@
               ]
             },
             {
-              "condition": "[not(parameters('useTableStorage'))]",
+              "condition": "[variables('useDefaultLb')]",
               "type": "Microsoft.ApiManagement/service/apis/operations/policies",
               "apiVersion": "2020-06-01-preview",
               "name": "[format('{0}/policy', format('{0}/getbackendfrompolicy', format('{0}/getbackend', format('{0}{1}apim', parameters('prefix'), parameters('location')))))]",
               "properties": {
                 "format": "xml",
-                "value": "[format('<policies>\r\n    <inbound>\r\n        <base />\r\n        <return-response>\r\n            <set-status code=\"302\" />\r\n            <set-header name=\"X-Apim-Region\" exists-action=\"override\">\r\n                <value>@(context.Deployment.Region)</value>\r\n            </set-header>\r\n            <set-header name=\"Location\" exists-action=\"override\">\r\n                <value>@{{\r\n                    var backends = \"{0}\".Split('','');\r\n                    var i = new Random(context.RequestId.GetHashCode()).Next(0, backends.Length);\r\n                    return backends[i];\r\n                }}</value>\r\n            </set-header>\r\n        </return-response>\r\n    </inbound>\r\n    <backend>\r\n        <base />\r\n    </backend>\r\n    <outbound>\r\n        <base />\r\n    </outbound>\r\n    <on-error>\r\n        <base />\r\n    </on-error>\r\n</policies>', parameters('backends'))]"
+                "value": "<policies>\r\n    <inbound>\r\n        <base />\r\n        <return-response>\r\n            <set-status code=\"302\" />\r\n            <set-header name=\"X-Apim-Region\" exists-action=\"override\">\r\n                <value>@(context.Deployment.Region)</value>\r\n            </set-header>\r\n            <set-header name=\"Location\" exists-action=\"override\">\r\n                <value>@{\r\n                    var backends = \"{{backend-urls}}\".Split(',');\r\n                    var i = new Random(context.RequestId.GetHashCode()).Next(0, backends.Length);\r\n                    return backends[i];\r\n                }</value>\r\n            </set-header>\r\n        </return-response>\r\n    </inbound>\r\n    <backend>\r\n        <base />\r\n    </backend>\r\n    <outbound>\r\n        <base />\r\n    </outbound>\r\n    <on-error>\r\n        <base />\r\n    </on-error>\r\n</policies>"
               },
               "dependsOn": [
+                "[resourceId('Microsoft.ApiManagement/service/namedValues', split(format('{0}/backend-urls', format('{0}{1}apim', parameters('prefix'), parameters('location'))), '/')[0], split(format('{0}/backend-urls', format('{0}{1}apim', parameters('prefix'), parameters('location'))), '/')[1])]",
                 "[resourceId('Microsoft.ApiManagement/service/apis/operations', split(format('{0}/getbackendfrompolicy', format('{0}/getbackend', format('{0}{1}apim', parameters('prefix'), parameters('location')))), '/')[0], split(format('{0}/getbackendfrompolicy', format('{0}/getbackend', format('{0}{1}apim', parameters('prefix'), parameters('location')))), '/')[1], split(format('{0}/getbackendfrompolicy', format('{0}/getbackend', format('{0}{1}apim', parameters('prefix'), parameters('location')))), '/')[2])]"
               ]
             },
             {
-              "condition": "[parameters('useTableStorage')]",
+              "condition": "[variables('useLanguageRouter')]",
+              "type": "Microsoft.ApiManagement/service/apis/operations/policies",
+              "apiVersion": "2020-06-01-preview",
+              "name": "[format('{0}/policy', format('{0}/getbackendbylanguage', format('{0}/getbackend', format('{0}{1}apim', parameters('prefix'), parameters('location')))))]",
+              "properties": {
+                "format": "xml",
+                "value": "<policies>\r\n    <inbound>\r\n        <base />\r\n        <return-response>\r\n            <set-status code=\"302\" />\r\n            <set-header name=\"X-Apim-Region\" exists-action=\"override\">\r\n                <value>@(context.Deployment.Region)</value>\r\n            </set-header>\r\n            <set-header name=\"Location\" exists-action=\"override\">\r\n                <value>@{\r\n                    var dict = \"{{backend-urls}}\".Split(';').Select(item => item.Split('=')).ToDictionary(s => s[0], s => s[1].Split(','));\r\n\r\n                    string[] languageUrls;\r\n                    // If the query parameter \"lang\" is present and the requested language exists in the list, we use that. Otherwise we use the header Accept-Language\r\n                    var langQueryParam = context.Request.OriginalUrl.Query.GetValueOrDefault(\"lang\", \"\").ToLower();\r\n                    if(!dict.TryGetValue(langQueryParam, out languageUrls))\r\n                    {\r\n                        var userLanguage = context.Request.Headers.GetValueOrDefault(\"Accept-Language\", \"en\");\r\n                        // Sample values for Accept-Language: \"Accept-Language: de\"  \"Accept-Language: de-CH\"  \"Accept-Language: en-US,en;q=0.5\"\r\n                        if(userLanguage.Contains(\",\"))\r\n                        {\r\n                            userLanguage = userLanguage.Split(',')[0];\r\n                        }\r\n                        if(userLanguage.Contains(\"-\"))\r\n                        {\r\n                            userLanguage = userLanguage.Split('-')[0];\r\n                        }\r\n                        // If the language from the header exists in the list, we use that, otherwise we default to English\r\n                        languageUrls = dict.ContainsKey(userLanguage) ? dict[userLanguage] : dict[\"en\"];\r\n                    }\r\n                    // If the list only contains more than one entry for the selected language, we pick at random\r\n                    var selectedUrl = languageUrls.Length == 0 ? languageUrls[0] : languageUrls[new Random(context.RequestId.GetHashCode()).Next(0, languageUrls.Length)];\r\n                    return selectedUrl;\r\n                }</value>\r\n            </set-header>\r\n        </return-response>\r\n    </inbound>\r\n    <backend>\r\n        <base />\r\n    </backend>\r\n    <outbound>\r\n        <base />\r\n    </outbound>\r\n    <on-error>\r\n        <base />\r\n    </on-error>\r\n</policies>"
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.ApiManagement/service/namedValues', split(format('{0}/backend-urls', format('{0}{1}apim', parameters('prefix'), parameters('location'))), '/')[0], split(format('{0}/backend-urls', format('{0}{1}apim', parameters('prefix'), parameters('location'))), '/')[1])]",
+                "[resourceId('Microsoft.ApiManagement/service/apis/operations', split(format('{0}/getbackendbylanguage', format('{0}/getbackend', format('{0}{1}apim', parameters('prefix'), parameters('location')))), '/')[0], split(format('{0}/getbackendbylanguage', format('{0}/getbackend', format('{0}{1}apim', parameters('prefix'), parameters('location')))), '/')[1], split(format('{0}/getbackendbylanguage', format('{0}/getbackend', format('{0}{1}apim', parameters('prefix'), parameters('location')))), '/')[2])]"
+              ]
+            },
+            {
+              "condition": "[variables('useTableStorage')]",
               "type": "Microsoft.ApiManagement/service/apis/operations/policies",
               "apiVersion": "2020-06-01-preview",
               "name": "[format('{0}/policy', format('{0}/getbackendfromtable', format('{0}/getbackend', format('{0}{1}apim', parameters('prefix'), parameters('location')))))]",
@@ -589,7 +633,20 @@
               ]
             },
             {
-              "condition": "[parameters('useTableStorage')]",
+              "condition": "[or(variables('useDefaultLb'), variables('useLanguageRouter'))]",
+              "type": "Microsoft.ApiManagement/service/namedValues",
+              "apiVersion": "2020-06-01-preview",
+              "name": "[format('{0}/backend-urls', format('{0}{1}apim', parameters('prefix'), parameters('location')))]",
+              "properties": {
+                "displayName": "backend-urls",
+                "value": "[parameters('backends')]"
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.ApiManagement/service', format('{0}{1}apim', parameters('prefix'), parameters('location')))]"
+              ]
+            },
+            {
+              "condition": "[variables('useTableStorage')]",
               "type": "Microsoft.ApiManagement/service/namedValues",
               "apiVersion": "2020-06-01-preview",
               "name": "[format('{0}/table-url', format('{0}{1}apim', parameters('prefix'), parameters('location')))]",
@@ -603,7 +660,7 @@
               ]
             },
             {
-              "condition": "[parameters('useTableStorage')]",
+              "condition": "[variables('useTableStorage')]",
               "type": "Microsoft.ApiManagement/service/namedValues",
               "apiVersion": "2020-06-01-preview",
               "name": "[format('{0}/table-sas-token', format('{0}{1}apim', parameters('prefix'), parameters('location')))]",
@@ -691,8 +748,8 @@
   "metadata": {
     "_generator": {
       "name": "bicep",
-      "version": "0.3.16.40157",
-      "templateHash": "11824743753617679695"
+      "version": "0.3.104.52030",
+      "templateHash": "5962523844245559369"
     }
   }
 }
