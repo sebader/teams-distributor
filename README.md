@@ -44,24 +44,34 @@ Create a resource group (change the location based on your needs)
 az group create -n myresource-group -l northeurope
 ```
 
-There are two different deployment types available, based on how many backend URLs you need to distribute traffic to. (the reason for this is a length limitation in API Management Policy definitions).
+There are three different deployment types available, based on how many backend URLs you need to distribute traffic to. (the reason for this is a length limitation in API Management Policy definitions).
 
-#### Policy-based mode - **this mode should be applicable to most users.**
-Use this when the list of all your backend URLs is not longer than approx. 14,000 characters. In this case the lift of URLs is injected directly into the policy of API Management. 
+#### Default Policy-based mode - **this mode should be applicable to most users.**
+Use this when the list of all your backend URLs is not longer than approx. 14,000 characters. In this case the list of URLs is injected directly into the policy of API Management. 
 
 Use this command to deploy the ARM template - replace the **backends** parameter with your individual, comma-separated list of Event URLs and **locationSecondary** based on your preferences.
 ```
-az deployment group create -g  myresource-group --template-file .\main.json -p prefix=myprefix -p locationSecondary=westeurope -p backends="https://teams.microsoft.com/l/meetup-join/1,https://teams.microsoft.com/l/meetup-join/2,https://teams.microsoft.com/l/meetup-join/3"
+az deployment group create -g  myresource-group --template-file .\main.json -p prefix=myprefix -p locationSecondary=westeurope -p loadBalancingMode=default -p backends="https://teams.microsoft.com/l/meetup-join/1,https://teams.microsoft.com/l/meetup-join/2,https://teams.microsoft.com/l/meetup-join/3"
 ```
 
 #### Table-storage mode - for high number of backend URLs
 In this case the URLs must be imported after the ARM template deployment into Table storage accounts and APIM fetches them from there. See below for details on this. \
-Use this command to deploy the ARM template - replace the **locationSecondary** parameter based on your preferences. Note that we are not specifying the URLs here yet and instead setting the parameter `useTableStorage=true`.
+Use this command to deploy the ARM template - replace the **locationSecondary** parameter based on your preferences. Note that we are not specifying the URLs here yet and instead setting the parameter `loadBalancingMode=largeEvent`.
 ```
-az deployment group create -g  myresource-group --template-file .\main.json -p prefix=myprefix -p locationSecondary=westeurope -p useTableStorage=true
+az deployment group create -g  myresource-group --template-file .\main.json -p prefix=myprefix -p locationSecondary=westeurope -p loadBalancingMode=largeEvent
 ```
 
 After the deployment finished, you need to import the list of URLs into both Table storage accounts. Use the `import-urls-to-table.ps1` PowerShell script in the `testing` folder for this purpose.
+
+
+#### Language-based routing mode - distribute users to different backends based on their browser language (or a query parameter)
+To use this more, your list of backends must be formatted different. See the following example.
+**Note**: This mode currently only supports a list of URLs that is not longer than approx. 14,000 characters.
+
+Use this command to deploy the ARM template - replace the **backends** parameter with your individual, semicolon-separated list of Event URLs, starting with the language code. Within each language code you can have multiple URLs. In this case, those will be load-balanced as well. There always needs to be at least one URL for English (`en`) as this is used as the fallback option. Also, update **locationSecondary** based on your preferences.
+```
+az deployment group create -g  myresource-group --template-file .\main.json -p prefix=myprefix -p locationSecondary=westeurope -p loadBalancingMode=userLanguage -p backends="de=https://teams.microsoft.com/l/meetup-join/19%3ameeting_GERMAN1;fr=https://teams.microsoft.com/l/meetup-join/19%3ameeting_FRENCH1;en=https://teams.microsoft.com/l/meetup-join/19%3ameeting_ENGLISH1,https://teams.microsoft.com/l/meetup-join/19%3ameeting_ENGLISH2"
+```
 
 #### Deploy through the Azure Portal
 As an alternative to using command line, you can also deploy through the Azure Portal directly and set the parameters accordingly.
