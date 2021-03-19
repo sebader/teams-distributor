@@ -76,12 +76,12 @@ Let's take the following example:
 - For **English (en)**, you have the following two URLs to redirect and load balance users to: **https://URL_EN_1** and **https://URL_EN_2**
 
 Here is how you will create the "backends" string for such a configuration:
-`backends="fr=https://URL_FR_1;https://URL_FR_2;https://URL_FR_3,de=https://URL_GE_1,en=https://URL_EN_1;https://URL_EN_2"`
+`backends="fr=https://URL_FR_1,https://URL_FR_2,https://URL_FR_3;de=https://URL_GE_1;en=https://URL_EN_1,https://URL_EN_2"`
 
 Note: all other languages, not specified in the backends definition, will fall into "en" as a default.
 
 ```
-az deployment group create -g  myresource-group --template-file .\main.json -p prefix=myprefix -p locationSecondary=westeurope -p loadBalancingMode=userLanguage -p backends="fr=https://URL_FR_1;https://URL_FR_2;https://URL_FR_3,de=https://URL_GE_1,en=https://URL_EN_1;https://URL_EN_2"
+az deployment group create -g  myresource-group --template-file .\main.json -p prefix=myprefix -p locationSecondary=westeurope -p loadBalancingMode=userLanguage -p backends="fr=https://URL_FR_1,https://URL_FR_2,https://URL_FR_3;de=https://URL_GE_1;en=https://URL_EN_1,https://URL_EN_2"
 ```
 
 In this mode, the browser request header `Accept-Language` is being used to determine which URL to use. Alternatively the query parameter `?lang=` can be set, which will then take precedence. For example: [https://{MYPREFIX}globalfrontdoor.azurefd.net?lang=fr]() to force French as the language.
